@@ -5,13 +5,16 @@ import { AccountService, BudgetService, GoalService, DebtService } from '../serv
 import { ImportService } from '../services/importService';
 import { DashboardService } from '../services/dashboardService';
 import { ReportService } from '../services/reportService';
+import { AuthService } from '../services/authService';
+import { optionalAuth, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { PrismaClient } from '@prisma/client';
 import { DEFAULT_CATEGORIES } from '@personal-finance/shared';
 
-const router = Router();
+const router: Router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 const prisma = new PrismaClient();
 
+const authService = new AuthService();
 const txService = new TransactionService();
 const accService = new AccountService();
 const budgetService = new BudgetService();
@@ -21,15 +24,53 @@ const importService = new ImportService();
 const dashboardService = new DashboardService();
 const reportService = new ReportService();
 
-// Default user ID for personal mode (customizable for multi-tenant SaaS)
-const getUserId = (req: any) => req.headers['x-user-id'] || 'user_demo_1';
+const getUserId = (req: AuthenticatedRequest) => req.userId || (req.headers['x-user-id'] as string) || 'user_demo_1';
 
 // Health Check
 router.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Categories
+// --- AUTHENTICATION ---
+router.post('/auth/register', async (req, res, next) => {
+  try {
+    const result = await authService.register(req.body);
+    res.status(201).json(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/auth/login', async (req, res, next) => {
+  try {
+    const result = await authService.login(req.body);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/auth/me', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const user = await authService.getMe(userId);
+    res.json(user);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/auth/onboarding', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const result = await authService.completeOnboarding(userId, req.body);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// --- CATEGORIES ---
 router.get('/categories', async (_req, res, next) => {
   try {
     const cats = await prisma.category.findMany({
@@ -44,8 +85,8 @@ router.get('/categories', async (_req, res, next) => {
   }
 });
 
-// Dashboard
-router.get('/dashboard', async (req, res, next) => {
+// --- DASHBOARD ---
+router.get('/dashboard', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const month = req.query.month as string;
@@ -56,8 +97,8 @@ router.get('/dashboard', async (req, res, next) => {
   }
 });
 
-// Transactions
-router.get('/transactions', async (req, res, next) => {
+// --- TRANSACTIONS ---
+router.get('/transactions', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const result = await txService.getTransactions(userId, {
@@ -76,7 +117,7 @@ router.get('/transactions', async (req, res, next) => {
   }
 });
 
-router.post('/transactions', async (req, res, next) => {
+router.post('/transactions', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const tx = await txService.createTransaction(userId, req.body);
@@ -86,28 +127,30 @@ router.post('/transactions', async (req, res, next) => {
   }
 });
 
-router.patch('/transactions/:id', async (req, res, next) => {
+router.patch('/transactions/:id', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
-    const tx = await txService.updateTransaction(req.params.id, userId, req.body);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const tx = await txService.updateTransaction(id, userId, req.body);
     res.json(tx);
   } catch (e) {
     next(e);
   }
 });
 
-router.delete('/transactions/:id', async (req, res, next) => {
+router.delete('/transactions/:id', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
-    await txService.deleteTransaction(req.params.id, userId);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    await txService.deleteTransaction(id, userId);
     res.json({ success: true });
   } catch (e) {
     next(e);
   }
 });
 
-// Accounts
-router.get('/accounts', async (req, res, next) => {
+// --- ACCOUNTS ---
+router.get('/accounts', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const accounts = await accService.getAccounts(userId);
@@ -117,7 +160,7 @@ router.get('/accounts', async (req, res, next) => {
   }
 });
 
-router.post('/accounts', async (req, res, next) => {
+router.post('/accounts', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const account = await accService.createAccount(userId, req.body);
@@ -127,8 +170,8 @@ router.post('/accounts', async (req, res, next) => {
   }
 });
 
-// Budgets
-router.get('/budgets', async (req, res, next) => {
+// --- BUDGETS ---
+router.get('/budgets', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
@@ -139,7 +182,7 @@ router.get('/budgets', async (req, res, next) => {
   }
 });
 
-router.post('/budgets', async (req, res, next) => {
+router.post('/budgets', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const budget = await budgetService.setBudget(userId, req.body);
@@ -149,8 +192,8 @@ router.post('/budgets', async (req, res, next) => {
   }
 });
 
-// Goals
-router.get('/goals', async (req, res, next) => {
+// --- GOALS ---
+router.get('/goals', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const goals = await goalService.getGoals(userId);
@@ -160,7 +203,7 @@ router.get('/goals', async (req, res, next) => {
   }
 });
 
-router.post('/goals', async (req, res, next) => {
+router.post('/goals', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const goal = await goalService.createGoal(userId, req.body);
@@ -170,18 +213,19 @@ router.post('/goals', async (req, res, next) => {
   }
 });
 
-router.post('/goals/:id/contribute', async (req, res, next) => {
+router.post('/goals/:id/contribute', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
-    const result = await goalService.addContribution(req.params.id, userId, req.body.amount, req.body.notes);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await goalService.addContribution(id, userId, req.body.amount, req.body.notes);
     res.json(result);
   } catch (e) {
     next(e);
   }
 });
 
-// Debts
-router.get('/debts', async (req, res, next) => {
+// --- DEBTS ---
+router.get('/debts', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const debts = await debtService.getDebts(userId);
@@ -191,7 +235,7 @@ router.get('/debts', async (req, res, next) => {
   }
 });
 
-router.post('/debts', async (req, res, next) => {
+router.post('/debts', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const debt = await debtService.createDebt(userId, req.body);
@@ -201,8 +245,8 @@ router.post('/debts', async (req, res, next) => {
   }
 });
 
-// PDF Statement Import
-router.post('/import/pdf', upload.single('file'), async (req: any, res, next) => {
+// --- PDF IMPORT ---
+router.post('/import/pdf', optionalAuth, upload.single('file'), async (req: any, res, next) => {
   try {
     const userId = getUserId(req);
     if (!req.file) {
@@ -224,28 +268,30 @@ router.post('/import/pdf', upload.single('file'), async (req: any, res, next) =>
   }
 });
 
-router.get('/import/:id', async (req, res, next) => {
+router.get('/import/:id', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
-    const details = await importService.getImportDetails(req.params.id, userId);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const details = await importService.getImportDetails(id, userId);
     res.json(details);
   } catch (e) {
     next(e);
   }
 });
 
-router.post('/import/:id/confirm', async (req, res, next) => {
+router.post('/import/:id/confirm', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
-    const result = await importService.confirmImport(req.params.id, userId, req.body.transactions);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await importService.confirmImport(id, userId, req.body.transactions);
     res.json(result);
   } catch (e) {
     next(e);
   }
 });
 
-// Reports & Reconciliation
-router.get('/reports/monthly', async (req, res, next) => {
+// --- REPORTS & RECONCILIATION ---
+router.get('/reports/monthly', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const now = new Date();
@@ -260,7 +306,7 @@ router.get('/reports/monthly', async (req, res, next) => {
   }
 });
 
-router.get('/reports/reconciliation', async (req, res, next) => {
+router.get('/reports/reconciliation', optionalAuth, async (req: AuthenticatedRequest, res, next) => {
   try {
     const userId = getUserId(req);
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
