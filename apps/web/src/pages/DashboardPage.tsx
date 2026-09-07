@@ -8,6 +8,7 @@ import { GoalProgressWidget } from '../components/dashboard/GoalProgressWidget';
 import { HealthScoreWidget } from '../components/dashboard/HealthScoreWidget';
 import { CreditCardWidget } from '../components/dashboard/CreditCardWidget';
 import { SeptemberTrackerWidget } from '../components/dashboard/SeptemberTrackerWidget';
+import { MonthlyRunningStatusWidget } from '../components/dashboard/MonthlyRunningStatusWidget';
 import { QuickExpenseLoggerBar } from '../components/dashboard/QuickExpenseLoggerBar';
 import { formatINR } from '@personal-finance/shared';
 import {
@@ -98,7 +99,10 @@ export const DashboardPage: React.FC = () => {
       {/* Quick Expense Logger Strip */}
       <QuickExpenseLoggerBar />
 
-      {/* Kailash's September Cash Flow & Debt Tracker */}
+      {/* Monthly Running Amount Status (Current Month Borrowed, Debts, Rent, Groceries, Lightbill, Wifi, Dairy, Outside Eating, Shopping, Subscriptions) */}
+      <MonthlyRunningStatusWidget />
+
+      {/* Kailash's September Cash Flow & Safe Bank Balance Milestones */}
       <SeptemberTrackerWidget />
 
       {/* Finance Mentor Banner */}

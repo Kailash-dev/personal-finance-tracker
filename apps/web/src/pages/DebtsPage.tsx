@@ -163,13 +163,11 @@ export const DebtsPage: React.FC = () => {
   const { user, selectedMonth, refreshTrigger, triggerRefresh } = useFinance();
   const { user: authUser } = useAuth();
 
-  // 5 Core Tabs:
+  // 3 Pure Debt Tabs:
   // 1. ALL_DEBTS (Personal Loans, Bike EMIs, Mobile Finance, Credit Cards, Chit Funds, Hand Loans)
-  // 2. LIVING_OUTGOINGS (Rent, Groceries, Milk, Bills, Maid, Petrol, Allowance)
-  // 3. HAND_BORROWINGS (Current month short-term borrowings & 1-click carry-forward/rollover)
-  // 4. CIBIL_SCORE (CIBIL score improvement, Credit Utilization <30%, Axis NOC tracker, Auto-debit safety)
-  // 5. INCOME_STREAMS (Job Salary + Freelance Gigs + Side Income gap calculator)
-  const [activeTab, setActiveTab] = useState<'ALL_DEBTS' | 'LIVING_OUTGOINGS' | 'HAND_BORROWINGS' | 'CIBIL_SCORE' | 'INCOME_STREAMS'>('ALL_DEBTS');
+  // 2. HAND_BORROWINGS (Current month short-term borrowings & 1-click carry-forward/rollover)
+  // 3. CIBIL_SCORE (CIBIL score improvement, Credit Utilization <30%, Axis NOC tracker, Auto-debit safety)
+  const [activeTab, setActiveTab] = useState<'ALL_DEBTS' | 'HAND_BORROWINGS' | 'CIBIL_SCORE'>('ALL_DEBTS');
   const [debtFilter, setDebtFilter] = useState<'ALL' | 'LOANS' | 'VEHICLE_EMIS' | 'CARDS' | 'CHITS' | 'HAND_LOANS'>('ALL');
 
   // Debts / Outgoings State
@@ -513,10 +511,10 @@ export const DebtsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-            Comprehensive Debt, CIBIL & Multi-Income Command Center
+            ⚡ Pure Debt, Loan & EMI Tracker
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Pro Financial Control: Log All Debts, EMIs, Hand Loans, CIBIL 750+ Repair, Living Costs & Freelance Income
+            Track active loans, monthly EMIs, credit cards, chit funds, and amount paid already
           </p>
         </div>
 
@@ -530,27 +528,14 @@ export const DebtsPage: React.FC = () => {
                 setMonthlyEmi('');
                 setOriginalAmount('');
                 setOutstandingAmount('');
+                setTotalTenureMonths('12');
+                setEmisPaid('0');
                 setIsAddModalOpen(true);
               }}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all self-start"
             >
               <Plus className="w-4 h-4" />
               <span>+ Log / Add New Debt</span>
-            </button>
-          )}
-
-          {activeTab === 'LIVING_OUTGOINGS' && (
-            <button
-              onClick={() => {
-                setType('RENT_HOUSING');
-                setName('');
-                setLender('');
-                setIsAddModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition-all self-start"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Add Living Outgoing</span>
             </button>
           )}
 
@@ -568,29 +553,10 @@ export const DebtsPage: React.FC = () => {
               <span>+ Record Hand Loan / Borrowing</span>
             </button>
           )}
-
-          {activeTab === 'INCOME_STREAMS' && (
-            <button
-              onClick={() => {
-                setStreamType('FREELANCE');
-                setStreamName('');
-                setStreamAmount('15000');
-                setStreamDay('15');
-                setIsAddIncomeStreamOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md shadow-purple-500/25 transition-all self-start"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Add Freelance / Side Income</span>
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Kailash's September Cash Flow & Debt Tracker Widget */}
-      <SeptemberTrackerWidget />
-
-      {/* 5 Main Feature Tabs */}
+      {/* 3 Pure Debt Feature Tabs */}
       <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80">
         <button
           type="button"
@@ -607,19 +573,6 @@ export const DebtsPage: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => setActiveTab('LIVING_OUTGOINGS')}
-          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'LIVING_OUTGOINGS'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
-        >
-          <Home className="w-4 h-4" />
-          <span>Living Costs ({livingCommitments.length})</span>
-        </button>
-
-        <button
-          type="button"
           onClick={() => setActiveTab('HAND_BORROWINGS')}
           className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'HAND_BORROWINGS'
@@ -628,7 +581,7 @@ export const DebtsPage: React.FC = () => {
           }`}
         >
           <HandCoins className="w-4 h-4" />
-          <span>Hand Loans & Rollover ({borrowings.filter((b) => b.status !== 'SETTLED').length})</span>
+          <span>🤝 Hand Loans & Borrowings ({borrowings.filter((b) => b.status !== 'SETTLED').length})</span>
         </button>
 
         <button
@@ -641,20 +594,7 @@ export const DebtsPage: React.FC = () => {
           }`}
         >
           <ShieldCheck className="w-4 h-4" />
-          <span>CIBIL Score 750+ Repair</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('INCOME_STREAMS')}
-          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'INCOME_STREAMS'
-              ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
-        >
-          <Laptop className="w-4 h-4" />
-          <span>Income Hub (Job + Freelance)</span>
+          <span>🛡️ CIBIL 750+ & Payoff Strategy</span>
         </button>
       </div>
 
@@ -1095,66 +1035,7 @@ export const DebtsPage: React.FC = () => {
         </div>
       )}
 
-      {/* =========================================================
-          TAB 2: LIVING OUTGOINGS (RENT, GROCERY, MILK, BILLS, MAID, ALLOWANCE)
-         ========================================================= */}
-      {activeTab === 'LIVING_OUTGOINGS' && (
-        <div className="space-y-6 animate-in fade-in-50 duration-150">
-          {/* Living Outgoings Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {livingCommitments.map((debt) => {
-              const config = DEBT_TYPE_CONFIG[debt.type] || DEBT_TYPE_CONFIG.OTHER_OUTGOING;
-              const Icon = config.icon;
-              return (
-                <div key={debt.id} className="glass-card p-5 space-y-4 hover:shadow-lg transition-shadow flex flex-col justify-between border border-slate-200 dark:border-slate-800">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2.5">
-                      <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                        <Icon className={`w-5 h-5 ${config.color}`} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug">{debt.name}</h4>
-                        <p className="text-[11px] text-slate-400 mt-0.5">{debt.lender}</p>
-                      </div>
-                    </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${config.badgeBg}`}>
-                      {config.label}
-                    </span>
-                  </div>
 
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-                    <span className="text-xs text-slate-500 font-medium">Monthly Planned:</span>
-                    <span className="text-base font-extrabold text-indigo-600 dark:text-indigo-400">
-                      {formatINR(debt.monthlyEmi)}/mo
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-                    <span className="flex items-center gap-1 text-slate-500 font-semibold text-[11px]">
-                      <Calendar className="w-3.5 h-3.5 text-indigo-500" /> Due on {debt.dueDay}th
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => handleOpenPayModal(debt)}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] border border-emerald-500/20 transition-colors flex items-center gap-1"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Log Paid</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteDebt(debt.id)}
-                        className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/60 text-slate-400 hover:text-rose-600 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* =========================================================
           TAB 2: CURRENT MONTH SHORT-TERM BORROWINGS & CARRY-FORWARD (उधार & Rollover)
@@ -1554,148 +1435,7 @@ export const DebtsPage: React.FC = () => {
       {/* =========================================================
           TAB 4: MULTI-STREAM INCOME HUB (JOB + FREELANCE + SIDE GIGS)
          ========================================================= */}
-      {activeTab === 'INCOME_STREAMS' && (
-        <div className="space-y-6 animate-in fade-in-50 duration-150">
-          {/* Income Summary Metric Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="glass-card p-5 border-indigo-500/20">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                  Primary Job Salary
-                </span>
-                <Briefcase className="w-4 h-4 text-indigo-500" />
-              </div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
-                {formatINR(incomeSummary.primarySalary)}
-              </p>
-              <span className="text-xs text-slate-500">Credited on 10th of every month</span>
-            </div>
-
-            <div className="glass-card p-5 border-purple-500/20">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
-                  Freelance & Side Gigs
-                </span>
-                <Laptop className="w-4 h-4 text-purple-500" />
-              </div>
-              <p className="text-2xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">
-                {formatINR(incomeSummary.totalFreelanceExpected)}
-              </p>
-              <span className="text-xs text-slate-500">
-                {incomeSummary.totalFreelanceExpected > 0
-                  ? `Accounts for ${incomeSummary.freelanceSharePercent.toFixed(0)}% of total income`
-                  : 'Add freelance gigs to accelerate debt payoff'}
-              </span>
-            </div>
-
-            <div className="glass-card p-5 border-emerald-500/20 bg-gradient-to-br from-white via-emerald-50/15 to-white dark:from-slate-900 dark:via-emerald-950/15 dark:to-slate-900">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                  Total Monthly Inflow
-                </span>
-                <TrendingUp className="w-4 h-4 text-emerald-500" />
-              </div>
-              <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
-                {formatINR(totalEarning)}
-              </p>
-              <span className="text-xs text-slate-500">Combined earning power</span>
-            </div>
-          </div>
-
-          {/* Side-Income Acceleration Calculator */}
-          <div className="glass-card p-6 space-y-3 bg-gradient-to-r from-indigo-900/10 via-brand-900/10 to-purple-900/10 border-indigo-500/20">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-brand-500" />
-              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-                Pro Manager Strategy: The Freelance Debt Acceleration Bridge
-              </h3>
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              With your primary job salary of <strong>₹50,000</strong>, your committed outgoings and debt obligations create a tight margin of <strong>-₹17,000</strong> in high-repayment months.
-              Adding a side freelance / consulting target of <strong>₹15,000 - ₹20,000</strong> immediately bridges all deficit, protects you from borrowing, and clears your credit card balances <strong>8 months faster</strong>!
-            </p>
-          </div>
-
-          {/* Income Streams List */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-                Active Income Streams ({incomeStreams.length})
-              </h3>
-              <button
-                onClick={() => {
-                  setStreamType('FREELANCE');
-                  setStreamName('');
-                  setStreamAmount('15000');
-                  setStreamDay('15');
-                  setIsAddIncomeStreamOpen(true);
-                }}
-                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ Add Stream</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {incomeStreams.map((stream) => (
-                <div
-                  key={stream.id}
-                  className="glass-card p-5 space-y-3 border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-shadow flex flex-col justify-between"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center shrink-0">
-                        {stream.type === 'SALARY_JOB' ? <Briefcase className="w-5 h-5" /> : <Laptop className="w-5 h-5" />}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{stream.name}</h4>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              stream.type === 'SALARY_JOB'
-                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
-                                : 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300'
-                            }`}
-                          >
-                            {stream.type === 'SALARY_JOB' ? 'PRIMARY JOB' : 'FREELANCE / GIG'}
-                          </span>
-                        </div>
-                        {stream.clientOrEmployer && (
-                          <p className="text-[11px] text-slate-400 mt-0.5">Source: {stream.clientOrEmployer}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-                      {formatINR(stream.expectedAmount)}/mo
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
-                    <span className="flex items-center gap-1 text-[11px]">
-                      <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-                      Expected on {stream.expectedDay}th
-                    </span>
-
-                    {stream.type !== 'SALARY_JOB' && (
-                      <button
-                        onClick={() => handleDeleteIncomeStream(stream.id)}
-                        className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/60 text-slate-400 hover:text-rose-600 transition-colors"
-                        title="Delete stream"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal 1: Add Outgoing / Living Cost / EMI Modal */}
+      {/* Modal 1: Add Pure Debt / Loan / EMI Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)} />
@@ -1703,9 +1443,9 @@ export const DebtsPage: React.FC = () => {
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  Add Monthly Outgoing / Living Expense
+                  Log / Add Debt, Loan or EMI Commitment
                 </h3>
-                <p className="text-[11px] text-slate-400">Rent, Groceries, Milk, Bills, Maid, VC 1, VC 2, Bike EMI & Cards</p>
+                <p className="text-[11px] text-slate-400">Bike Loan, Chit Fund VC 2, Bajaj EMI, Cards, Personal Loans</p>
               </div>
               <button onClick={() => setIsAddModalOpen(false)}>
                 <X className="w-5 h-5 text-slate-400 hover:text-slate-600" />
@@ -1714,45 +1454,29 @@ export const DebtsPage: React.FC = () => {
 
             <form onSubmit={handleAddDebt} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Outgoing Category</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Debt / Loan Type</label>
                 <select
                   value={type}
                   onChange={(e) => {
                     const newType = e.target.value as DebtType;
                     setType(newType);
-                    if (newType === 'RENT_HOUSING' && !name) setName('House Rent');
-                    if (newType === 'GROCERIES_FOOD' && !name) setName('Monthly Groceries (DMart)');
-                    if (newType === 'MILK_DAIRY' && !name) setName('Daily Milk (Amul/Country Delight)');
-                    if (newType === 'UTILITIES_BILLS' && !name) setName('Electricity & Gas Bills');
-                    if (newType === 'MAID_COOK' && !name) setName('House Maid / Cook Salary');
-                    if (newType === 'FUEL_TRANSPORT' && !name) setName('Petrol & Fuel Commute');
-                    if (newType === 'CHIT_FUND_VC' && !name) setName('VC 1 (Monthly Chit)');
-                    if (newType === 'BIKE_LOAN' && !name) setName('Bike EMI');
-                    if (newType === 'CREDIT_CARD_MIN_PAYMENT' && !name) setName('SBI Card Min Due');
-                    if (newType === 'PERSONAL_BORROWING' && !name) setName('Personal Hand Loan');
+                    if (newType === 'BIKE_LOAN' && !name) setName('Bike Loan Monthly EMI');
+                    if (newType === 'CHIT_FUND_VC' && !name) setName('Chit Fund (VC 2)');
+                    if (newType === 'CREDIT_CARD_MIN_PAYMENT' && !name) setName('Credit Card EMI / Due');
+                    if (newType === 'PERSONAL_LOAN' && !name) setName('Personal Loan EMI');
+                    if (newType === 'PERSONAL_BORROWING' && !name) setName('Small Borrowing / Hand Loan');
                   }}
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium"
                 >
-                  <optgroup label="🏠 Monthly Living Essentials">
-                    <option value="RENT_HOUSING">🏠 House Rent & Society Maintenance</option>
-                    <option value="GROCERIES_FOOD">🛒 Monthly Groceries (DMart / Supermarket)</option>
-                    <option value="MILK_DAIRY">🥛 Daily Milk & Dairy (Amul / Country Delight)</option>
-                    <option value="UTILITIES_BILLS">⚡ Electricity, Water & Gas Bills</option>
-                    <option value="MAID_COOK">🧹 House Maid & Cook Salary</option>
-                    <option value="FUEL_TRANSPORT">⛽ Monthly Petrol & Fuel Commute</option>
-                    <option value="FAMILY_PERSONAL">👨‍👩‍👧 Wife / Partner / Family Allowance</option>
-                  </optgroup>
-                  <optgroup label="💳 Fixed EMIs, Chits & Cards">
-                    <option value="CHIT_FUND_VC">🪙 VC / Chit Fund (VC 1, VC 2, Committee)</option>
-                    <option value="BIKE_LOAN">🏍 Bike / Superbike Loan EMI</option>
-                    <option value="CREDIT_CARD_MIN_PAYMENT">💳 Credit Card Minimum Due (SBI/RBL/HDFC)</option>
-                    <option value="PERSONAL_BORROWING">🤝 Personal Borrowing / Hand Loan</option>
-                    <option value="CAR_LOAN">🚗 Car Loan EMI</option>
-                    <option value="HOME_LOAN">🏠 Home Loan / Mortgage EMI</option>
-                    <option value="PERSONAL_LOAN">💼 Bank Personal Loan</option>
-                    <option value="EDUCATION_LOAN">🎓 Education Loan</option>
-                    <option value="OTHER_OUTGOING">🔄 Other Monthly Fixed Commitment</option>
-                  </optgroup>
+                  <option value="PERSONAL_LOAN">💼 Personal Loan (Bank / NBFC / FinTech)</option>
+                  <option value="BIKE_LOAN">🏍️ Bike / Two-Wheeler Loan EMI</option>
+                  <option value="CHIT_FUND_VC">🪙 Chit Fund / VC (VC 1, VC 2, Committee)</option>
+                  <option value="CREDIT_CARD_MIN_PAYMENT">💳 Credit Card EMI / Minimum Due (SBI/Axis/HDFC)</option>
+                  <option value="PERSONAL_BORROWING">🤝 Small Borrowing / Hand Loan / Ram Fincorp</option>
+                  <option value="CAR_LOAN">🚗 Car Loan EMI</option>
+                  <option value="HOME_LOAN">🏠 Home Loan / Mortgage EMI</option>
+                  <option value="EDUCATION_LOAN">🎓 Education Loan</option>
+                  <option value="OTHER_OUTGOING">🔄 Other Fixed Loan Commitment</option>
                 </select>
               </div>
 
