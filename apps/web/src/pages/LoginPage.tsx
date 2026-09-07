@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { login, register, demoLogin } = useAuth();
+  const { login, register } = useAuth();
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
@@ -42,11 +42,6 @@ export const LoginPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoAccess = () => {
-    demoLogin();
-    navigate('/');
   };
 
   return (
@@ -113,7 +108,7 @@ export const LoginPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="Kailash"
+                  placeholder="e.g. Rahul Sharma"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -129,7 +124,7 @@ export const LoginPage: React.FC = () => {
               <input
                 type="email"
                 required
-                placeholder="kailash@example.com"
+                placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -166,7 +161,7 @@ export const LoginPage: React.FC = () => {
               </label>
               <input
                 type="number"
-                placeholder="e.g. 120000"
+                placeholder="e.g. 100000"
                 value={income}
                 onChange={(e) => setIncome(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold"
@@ -183,19 +178,6 @@ export const LoginPage: React.FC = () => {
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
-        {/* 1-Click Demo Login */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-center space-y-2">
-          <button
-            type="button"
-            onClick={handleDemoAccess}
-            className="w-full py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-500/30 flex items-center justify-center gap-2 transition-colors"
-          >
-            <Sparkles className="w-4 h-4 text-emerald-500" />
-            <span>1-Click Demo Login (Kailash)</span>
-          </button>
-          <p className="text-[11px] text-slate-400">Instant access preloaded with 3 months of Indian financial records</p>
-        </div>
       </div>
     </div>
   );

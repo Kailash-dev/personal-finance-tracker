@@ -21,15 +21,6 @@ import {
   calculateMonthlyReconciliation,
   formatINR,
 } from '@personal-finance/shared';
-import {
-  SEED_USER,
-  SEED_ACCOUNTS,
-  SEED_DEBTS,
-  SEED_GOALS,
-  SEED_BUDGET,
-  SEED_RECURRING,
-  SEED_TRANSACTIONS,
-} from '../../../../prisma/seedData';
 
 const STORAGE_KEYS = {
   USER: 'rupeetrack_user',
@@ -53,29 +44,26 @@ class StorageService {
   private initDefaults() {
     if (typeof window === 'undefined') return;
 
-    if (!localStorage.getItem(STORAGE_KEYS.USER)) {
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(SEED_USER));
-    }
     if (!localStorage.getItem(STORAGE_KEYS.ACCOUNTS)) {
-      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(SEED_ACCOUNTS));
+      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.TRANSACTIONS)) {
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(SEED_TRANSACTIONS));
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.CATEGORIES)) {
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(DEFAULT_CATEGORIES));
     }
     if (!localStorage.getItem(STORAGE_KEYS.BUDGETS)) {
-      localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify([SEED_BUDGET]));
+      localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.GOALS)) {
-      localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(SEED_GOALS));
+      localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.DEBTS)) {
-      localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(SEED_DEBTS));
+      localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.RECURRING)) {
-      localStorage.setItem(STORAGE_KEYS.RECURRING, JSON.stringify(SEED_RECURRING));
+      localStorage.setItem(STORAGE_KEYS.RECURRING, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.RULES)) {
       localStorage.setItem(STORAGE_KEYS.RULES, JSON.stringify(DEFAULT_MERCHANT_RULES));
@@ -85,7 +73,17 @@ class StorageService {
   // --- USER ---
   getUser(): User {
     const raw = localStorage.getItem(STORAGE_KEYS.USER);
-    return raw ? JSON.parse(raw) : (SEED_USER as any);
+    return raw
+      ? JSON.parse(raw)
+      : {
+          id: 'user_1',
+          email: '',
+          name: '',
+          monthlyIncome: 0,
+          currency: 'INR',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
   }
 
   updateUser(user: Partial<User>): User {
@@ -650,7 +648,7 @@ class StorageService {
     if (data.rules) localStorage.setItem(STORAGE_KEYS.RULES, JSON.stringify(data.rules));
   }
 
-  resetToDemo() {
+  clearAllData() {
     localStorage.clear();
     this.initDefaults();
   }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
+import { useAuth } from '../context/AuthContext';
 import { dataProvider } from '../services/dataProvider';
 import { Debt, DebtType } from '@personal-finance/types';
 import { formatINR, calculateDebtSummary } from '@personal-finance/shared';
@@ -13,10 +14,12 @@ import {
   Building,
   TrendingDown,
   Info,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const DebtsPage: React.FC = () => {
   const { user, refreshTrigger, triggerRefresh } = useFinance();
+  const { user: authUser } = useAuth();
   const [debts, setDebts] = useState<Debt[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [name, setName] = useState('');
@@ -43,7 +46,7 @@ export const DebtsPage: React.FC = () => {
 
     try {
       await dataProvider.createDebt({
-        userId: 'user_demo_1',
+        userId: authUser?.id || user?.id || 'user_1',
         name,
         lender,
         type,
@@ -68,7 +71,7 @@ export const DebtsPage: React.FC = () => {
     }
   };
 
-  const summary = calculateDebtSummary(debts, user?.monthlyIncome || 120000);
+  const summary = calculateDebtSummary(debts, user?.monthlyIncome || authUser?.monthlyIncome || 0);
 
   return (
     <div className="space-y-6">
@@ -130,49 +133,70 @@ export const DebtsPage: React.FC = () => {
       </div>
 
       {/* Debts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {debts.map((debt) => {
-          const paidAmount = Math.max(0, debt.originalAmount - debt.outstandingAmount);
-          const progressPct = debt.originalAmount > 0 ? (paidAmount / debt.originalAmount) * 100 : 0;
+      {debts.length === 0 ? (
+        <div className="glass-card p-12 text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-2xl">
+            🎉
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">No Active Loans or EMIs</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1">
+              You are currently debt-free! If you have vehicle loans, home loans, personal loans, or consumer EMIs, add them here to monitor your repayment horizon and DTI.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-md shadow-brand-500/25 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Loan / EMI</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {debts.map((debt) => {
+            const paidAmount = Math.max(0, debt.originalAmount - debt.outstandingAmount);
+            const progressPct = debt.originalAmount > 0 ? (paidAmount / debt.originalAmount) * 100 : 0;
 
-          return (
-            <div key={debt.id} className="glass-card p-5 space-y-4">
-              <div className="flex items-center justify-between">
+            return (
+              <div key={debt.id} className="glass-card p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{debt.name}</h4>
+                    <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                      <Building className="w-3 h-3" /> {debt.lender} • {debt.interestRate}% p.a.
+                    </p>
+                  </div>
+                  <span className="text-xs font-extrabold text-brand-600 dark:text-brand-400 px-2.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/60 border border-brand-500/20">
+                    EMI: {formatINR(debt.monthlyEmi)}/mo
+                  </span>
+                </div>
+
+                {/* Progress bar */}
                 <div>
-                  <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{debt.name}</h4>
-                  <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                    <Building className="w-3 h-3" /> {debt.lender} • {debt.interestRate}% p.a.
-                  </p>
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5 font-medium">
+                    <span>Paid: {formatINR(paidAmount)}</span>
+                    <span>Outstanding: {formatINR(debt.outstandingAmount)}</span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-brand-500 to-emerald-500 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, progressPct)}%` }}
+                    />
+                  </div>
                 </div>
-                <span className="text-xs font-extrabold text-brand-600 dark:text-brand-400 px-2.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/60 border border-brand-500/20">
-                  EMI: {formatINR(debt.monthlyEmi)}/mo
-                </span>
-              </div>
 
-              {/* Progress bar */}
-              <div>
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5 font-medium">
-                  <span>Paid: {formatINR(paidAmount)}</span>
-                  <span>Outstanding: {formatINR(debt.outstandingAmount)}</span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-brand-500 to-emerald-500 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, progressPct)}%` }}
-                  />
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <span className="flex items-center gap-1 text-amber-500 font-semibold">
+                    <Calendar className="w-3 h-3" /> Auto-Debit on {debt.dueDay}th of month
+                  </span>
+                  <span>Original: {formatINR(debt.originalAmount)}</span>
                 </div>
               </div>
-
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <span className="flex items-center gap-1 text-amber-500 font-semibold">
-                  <Calendar className="w-3 h-3" /> Auto-Debit on {debt.dueDay}th of month
-                </span>
-                <span>Original: {formatINR(debt.originalAmount)}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Add Loan Modal */}
       {isAddModalOpen && (

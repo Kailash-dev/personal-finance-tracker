@@ -62,8 +62,7 @@ personal-finance-tracker/
 │
 ├── prisma/
 │   ├── schema.prisma            # PostgreSQL / SQLite Prisma Schema
-│   ├── seedData.ts              # 3 months of realistic Indian seed data
-│   └── seed.ts                  # Database seeding script
+│   └── seed.ts                  # System categories & merchant rule initialization
 │
 ├── .github/
 │   └── workflows/

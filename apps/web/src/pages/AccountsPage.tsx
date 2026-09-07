@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
+import { useAuth } from '../context/AuthContext';
 import { dataProvider } from '../services/dataProvider';
 import { formatINR, INDIAN_BANKS } from '@personal-finance/shared';
 import { Account, AccountType, BankName } from '@personal-finance/types';
@@ -17,6 +18,7 @@ import {
 
 export const AccountsPage: React.FC = () => {
   const { accounts, triggerRefresh } = useFinance();
+  const { user } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newAccName, setNewAccName] = useState('');
   const [newAccType, setNewAccType] = useState<AccountType>('SAVINGS');
@@ -37,7 +39,7 @@ export const AccountsPage: React.FC = () => {
       const limit = parseFloat(newAccLimit) || undefined;
 
       await dataProvider.createAccount({
-        userId: 'user_demo_1',
+        userId: user?.id || 'user_1',
         name: newAccName,
         type: newAccType,
         bank: newAccBank,
@@ -126,79 +128,100 @@ export const AccountsPage: React.FC = () => {
       </div>
 
       {/* Accounts List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {accounts.map((acc) => {
-          const isCreditCard = acc.type === 'CREDIT_CARD';
-          const isInvestment = acc.type === 'INVESTMENT';
-          const isCash = acc.type === 'CASH';
+      {accounts.length === 0 ? (
+        <div className="glass-card p-12 text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 flex items-center justify-center mx-auto text-2xl">
+            🏦
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">No Accounts Added Yet</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1">
+              Add your Indian bank savings account, salary account, credit cards, or cash wallets to track your real balances.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-md shadow-brand-500/25 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Your First Account</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {accounts.map((acc) => {
+            const isCreditCard = acc.type === 'CREDIT_CARD';
+            const isInvestment = acc.type === 'INVESTMENT';
+            const isCash = acc.type === 'CASH';
 
-          return (
-            <div
-              key={acc.id}
-              className={`glass-card p-5 flex flex-col justify-between space-y-4 ${
-                isCreditCard
-                  ? 'border-indigo-500/30 bg-gradient-to-br from-white/90 via-indigo-50/20 to-white/90 dark:from-slate-900/90 dark:via-indigo-950/20 dark:to-slate-900/90'
-                  : ''
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg">
-                      {isCreditCard ? '💳' : isInvestment ? '📈' : isCash ? '💵' : '🏦'}
+            return (
+              <div
+                key={acc.id}
+                className={`glass-card p-5 flex flex-col justify-between space-y-4 ${
+                  isCreditCard
+                    ? 'border-indigo-500/30 bg-gradient-to-br from-white/90 via-indigo-50/20 to-white/90 dark:from-slate-900/90 dark:via-indigo-950/20 dark:to-slate-900/90'
+                    : ''
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg">
+                        {isCreditCard ? '💳' : isInvestment ? '📈' : isCash ? '💵' : '🏦'}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{acc.name}</h4>
+                        <p className="text-[11px] font-mono text-slate-400">{acc.accountNumberMasked || acc.type}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{acc.name}</h4>
-                      <p className="text-[11px] font-mono text-slate-400">{acc.accountNumberMasked || acc.type}</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase">
-                    {acc.type}
-                  </span>
-                </div>
-
-                <div className="mt-4">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase">
-                    {isCreditCard ? 'Current Outstanding' : 'Current Balance'}
-                  </span>
-                  <p
-                    className={`text-2xl font-extrabold tracking-tight ${
-                      isCreditCard
-                        ? 'text-rose-600 dark:text-rose-400'
-                        : 'text-slate-900 dark:text-slate-100'
-                    }`}
-                  >
-                    {formatINR(Math.abs(acc.currentBalance))}
-                  </p>
-                </div>
-              </div>
-
-              {isCreditCard && acc.creditLimit && (
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2 text-xs">
-                  <div className="flex justify-between text-slate-500">
-                    <span>Credit Limit:</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{formatINR(acc.creditLimit)}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>Available Limit:</span>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      {formatINR((acc.creditLimit || 0) + acc.currentBalance)}
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase">
+                      {acc.type}
                     </span>
                   </div>
-                  {acc.dueDate && (
-                    <div className="flex items-center justify-between text-[11px] text-amber-600 dark:text-amber-400 font-semibold pt-1">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" /> Due Date:
-                      </span>
-                      <span>{acc.dueDate}th of month</span>
-                    </div>
-                  )}
+
+                  <div className="mt-4">
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase">
+                      {isCreditCard ? 'Current Outstanding' : 'Current Balance'}
+                    </span>
+                    <p
+                      className={`text-2xl font-extrabold tracking-tight ${
+                        isCreditCard
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : 'text-slate-900 dark:text-slate-100'
+                      }`}
+                    >
+                      {formatINR(Math.abs(acc.currentBalance))}
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+
+                {isCreditCard && acc.creditLimit && (
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+                    <div className="flex justify-between text-slate-500">
+                      <span>Credit Limit:</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">{formatINR(acc.creditLimit)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>Available Limit:</span>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                        {formatINR((acc.creditLimit || 0) + acc.currentBalance)}
+                      </span>
+                    </div>
+                    {acc.dueDate && (
+                      <div className="flex items-center justify-between text-[11px] text-amber-600 dark:text-amber-400 font-semibold pt-1">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> Due Date:
+                        </span>
+                        <span>{acc.dueDate}th of month</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Add Account Modal */}
       {isAddModalOpen && (

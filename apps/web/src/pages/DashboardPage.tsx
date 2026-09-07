@@ -182,65 +182,91 @@ export const DashboardPage: React.FC = () => {
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
-                <th className="pb-2.5">Date</th>
-                <th className="pb-2.5">Description</th>
-                <th className="pb-2.5">Category</th>
-                <th className="pb-2.5">Method</th>
-                <th className="pb-2.5">Account</th>
-                <th className="pb-2.5 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-              {recentTransactions.map((tx: any) => {
-                const isIncome = tx.type === 'INCOME';
-                const isTransfer = tx.type === 'TRANSFER';
-                return (
-                  <tr key={tx.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                      {tx.date}
-                    </td>
-                    <td className="py-3">
-                      <p className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
-                        {tx.merchantName || tx.description}
-                      </p>
-                      {tx.notes && <p className="text-[10px] text-slate-400 line-clamp-1">{tx.notes}</p>}
-                    </td>
-                    <td className="py-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px]">
-                        <span>{tx.category?.icon || '📦'}</span>
-                        <span>{tx.category?.name || 'Other'}</span>
-                      </span>
-                    </td>
-                    <td className="py-3 text-slate-500 whitespace-nowrap">
-                      <span className="text-[11px]">{tx.paymentMethod}</span>
-                    </td>
-                    <td className="py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap text-[11px]">
-                      {tx.account?.name || 'HDFC Salary'}
-                    </td>
-                    <td className="py-3 text-right whitespace-nowrap">
-                      <span
-                        className={`font-bold inline-flex items-center gap-0.5 ${
-                          isIncome
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : isTransfer
-                            ? 'text-slate-600 dark:text-slate-400'
-                            : 'text-slate-900 dark:text-slate-100'
-                        }`}
-                      >
-                        {isIncome ? <ArrowDownLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
-                        {formatINR(Math.abs(tx.amount))}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {recentTransactions.length === 0 ? (
+          <div className="text-center py-10 space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+              <Receipt className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">No Transactions Recorded This Month</p>
+              <p className="text-xs text-slate-400 mt-0.5">Import your bank PDF statement or record your first expense</p>
+            </div>
+            <div className="pt-1 flex items-center justify-center gap-2">
+              <Link
+                to="/import"
+                className="px-3.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-sm transition-colors"
+              >
+                Import Statement
+              </Link>
+              <button
+                onClick={() => setIsQuickModalOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors"
+              >
+                Add Manual Expense
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+                  <th className="pb-2.5">Date</th>
+                  <th className="pb-2.5">Description</th>
+                  <th className="pb-2.5">Category</th>
+                  <th className="pb-2.5">Method</th>
+                  <th className="pb-2.5">Account</th>
+                  <th className="pb-2.5 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                {recentTransactions.map((tx: any) => {
+                  const isIncome = tx.type === 'INCOME';
+                  const isTransfer = tx.type === 'TRANSFER';
+                  return (
+                    <tr key={tx.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 text-slate-500 dark:text-slate-400 font-mono text-[11px] whitespace-nowrap">
+                        {tx.date}
+                      </td>
+                      <td className="py-3">
+                        <p className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-1">
+                          {tx.merchantName || tx.description}
+                        </p>
+                        {tx.notes && <p className="text-[10px] text-slate-400 line-clamp-1">{tx.notes}</p>}
+                      </td>
+                      <td className="py-3 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px]">
+                          <span>{tx.category?.icon || '📦'}</span>
+                          <span>{tx.category?.name || 'Other'}</span>
+                        </span>
+                      </td>
+                      <td className="py-3 text-slate-500 whitespace-nowrap">
+                        <span className="text-[11px]">{tx.paymentMethod}</span>
+                      </td>
+                      <td className="py-3 text-slate-500 dark:text-slate-400 whitespace-nowrap text-[11px]">
+                        {tx.account?.name || 'Primary A/c'}
+                      </td>
+                      <td className="py-3 text-right whitespace-nowrap">
+                        <span
+                          className={`font-bold inline-flex items-center gap-0.5 ${
+                            isIncome
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : isTransfer
+                              ? 'text-slate-600 dark:text-slate-400'
+                              : 'text-slate-900 dark:text-slate-100'
+                          }`}
+                        >
+                          {isIncome ? <ArrowDownLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
+                          {formatINR(Math.abs(tx.amount))}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

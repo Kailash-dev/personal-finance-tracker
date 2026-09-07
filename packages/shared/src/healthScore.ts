@@ -36,7 +36,10 @@ export function calculateFinancialHealthScore(input: HealthScoreInput): Financia
   const savingsRate = monthlyIncome > 0 ? (savings / monthlyIncome) * 100 : 0;
   let savingsScore = 0;
 
-  if (savingsRate >= 35) {
+  if (monthlyIncome === 0 && monthlyExpenses === 0) {
+    savingsScore = 15;
+    insights.push(`💡 Add your monthly income and expenses or import bank statements to calculate your exact savings rate.`);
+  } else if (savingsRate >= 35) {
     savingsScore = 25;
     insights.push(`🌟 Outstanding savings rate of ${savingsRate.toFixed(1)}%!`);
   } else if (savingsRate >= 20) {

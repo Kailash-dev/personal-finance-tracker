@@ -9,7 +9,6 @@ interface AuthContextType {
   isOnboarded: boolean;
   login: (email: string, password?: string) => Promise<void>;
   register: (email: string, password: string, name: string, monthlyIncome?: number) => Promise<void>;
-  demoLogin: () => void;
   logout: () => void;
   completeOnboarding: (data: any) => Promise<void>;
 }
@@ -26,10 +25,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(AUTH_KEYS.TOKEN));
   const [user, setUser] = useState<User | null>(() => {
     const raw = localStorage.getItem(AUTH_KEYS.USER);
-    return raw ? JSON.parse(raw) : storageService.getUser();
+    return raw ? JSON.parse(raw) : null;
   });
   const [isOnboarded, setIsOnboarded] = useState<boolean>(() => {
-    return localStorage.getItem(AUTH_KEYS.ONBOARDED) !== 'false';
+    return localStorage.getItem(AUTH_KEYS.ONBOARDED) === 'true';
   });
 
   const isAuthenticated = !!user;
@@ -60,20 +59,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     // Local authentication
+    const existingRaw = localStorage.getItem(AUTH_KEYS.USER);
+    const existing = existingRaw ? JSON.parse(existingRaw) : null;
+
     const localUser: User = {
-      id: email === 'kailash@example.com' ? 'user_demo_1' : `user_${Date.now()}`,
+      id: existing?.email === email ? existing.id : `user_${Date.now()}`,
       email,
-      name: email.split('@')[0],
-      monthlyIncome: 120000,
+      name: existing?.name || email.split('@')[0],
+      monthlyIncome: existing?.monthlyIncome || 0,
       currency: 'INR',
-      createdAt: new Date().toISOString(),
+      createdAt: existing?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    const mockToken = `token_${Date.now()}`;
-    setToken(mockToken);
+    const localToken = `token_${Date.now()}`;
+    setToken(localToken);
     setUser(localUser);
-    localStorage.setItem(AUTH_KEYS.TOKEN, mockToken);
+    localStorage.setItem(AUTH_KEYS.TOKEN, localToken);
     localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(localUser));
     localStorage.setItem(AUTH_KEYS.ONBOARDED, 'true');
     setIsOnboarded(true);
@@ -112,24 +114,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    const mockToken = `token_${Date.now()}`;
-    setToken(mockToken);
+    const localToken = `token_${Date.now()}`;
+    setToken(localToken);
     setUser(newUser);
-    localStorage.setItem(AUTH_KEYS.TOKEN, mockToken);
+    localStorage.setItem(AUTH_KEYS.TOKEN, localToken);
     localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(newUser));
     setIsOnboarded(false);
     localStorage.setItem(AUTH_KEYS.ONBOARDED, 'false');
-  };
-
-  const demoLogin = () => {
-    const demoUser = storageService.getUser();
-    const mockToken = 'token_demo_kailash';
-    setToken(mockToken);
-    setUser(demoUser);
-    localStorage.setItem(AUTH_KEYS.TOKEN, mockToken);
-    localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(demoUser));
-    localStorage.setItem(AUTH_KEYS.ONBOARDED, 'true');
-    setIsOnboarded(true);
   };
 
   const logout = () => {
@@ -137,6 +128,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
     localStorage.removeItem(AUTH_KEYS.TOKEN);
     localStorage.removeItem(AUTH_KEYS.USER);
+    localStorage.removeItem(AUTH_KEYS.ONBOARDED);
   };
 
   const completeOnboarding = async (data: any) => {
@@ -177,7 +169,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isOnboarded,
         login,
         register,
-        demoLogin,
         logout,
         completeOnboarding,
       }}

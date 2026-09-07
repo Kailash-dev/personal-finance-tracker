@@ -50,122 +50,6 @@ export const ImportPage: React.FC = () => {
     }
   };
 
-  const handleLoadSampleStatement = () => {
-    // Generate demo simulated parsed bank statement for fast testing
-    const sampleTxns: BankImportTransaction[] = [
-      {
-        id: 'sample_1',
-        importId: 'sample_import',
-        date: '2026-09-01',
-        description: 'NEFT CR-SALARY FOR AUG 2026',
-        amount: 120000,
-        type: 'INCOME',
-        paymentMethod: 'NEFT',
-        categoryId: 'cat_income',
-        subcategoryId: 'sub_salary',
-        confidence: 0.98,
-        isDuplicate: false,
-        isSkipped: false,
-      },
-      {
-        id: 'sample_2',
-        importId: 'sample_import',
-        date: '2026-09-02',
-        description: 'UPI-RENT-LANDLORD@OKSBI',
-        amount: -20000,
-        type: 'EXPENSE',
-        paymentMethod: 'UPI',
-        categoryId: 'cat_housing',
-        subcategoryId: 'sub_rent',
-        confidence: 0.95,
-        isDuplicate: false,
-        isSkipped: false,
-      },
-      {
-        id: 'sample_3',
-        importId: 'sample_import',
-        date: '2026-09-03',
-        description: 'UPI-SWIGGY-BANGALORE',
-        amount: -450,
-        type: 'EXPENSE',
-        paymentMethod: 'UPI',
-        categoryId: 'cat_food',
-        subcategoryId: 'sub_delivery',
-        confidence: 0.98,
-        isDuplicate: false,
-        isSkipped: false,
-      },
-      {
-        id: 'sample_4',
-        importId: 'sample_import',
-        date: '2026-09-04',
-        description: 'POS DMART SUPERMARKET',
-        amount: -3450,
-        type: 'EXPENSE',
-        paymentMethod: 'DEBIT_CARD',
-        categoryId: 'cat_food',
-        subcategoryId: 'sub_groceries',
-        confidence: 0.96,
-        isDuplicate: false,
-        isSkipped: false,
-      },
-      {
-        id: 'sample_5',
-        importId: 'sample_import',
-        date: '2026-09-05',
-        description: 'UPI-HPCL PETROL PUMP',
-        amount: -2000,
-        type: 'EXPENSE',
-        paymentMethod: 'UPI',
-        categoryId: 'cat_transport',
-        subcategoryId: 'sub_petrol',
-        confidence: 0.98,
-        isDuplicate: false,
-        isSkipped: false,
-      },
-      {
-        id: 'sample_6',
-        importId: 'sample_import',
-        date: '2026-09-05',
-        description: 'ACH DR-HDFC CAR LOAN EMI',
-        amount: -18500,
-        type: 'DEBT_PAYMENT',
-        paymentMethod: 'AUTO_DEBIT',
-        categoryId: 'cat_financial',
-        subcategoryId: 'sub_emi_car',
-        confidence: 0.98,
-        isDuplicate: true,
-        duplicateReason: 'Exact date & amount already in September records',
-        isSkipped: true, // Default to skip duplicate
-      },
-      {
-        id: 'sample_7',
-        importId: 'sample_import',
-        date: '2026-09-06',
-        description: 'UPI-UNKNOWN MERCHANT 9876',
-        amount: -1200,
-        type: 'EXPENSE',
-        paymentMethod: 'UPI',
-        categoryId: 'cat_misc',
-        confidence: 0.42,
-        isDuplicate: false,
-        isSkipped: false,
-      },
-    ];
-
-    setParseResult({
-      fileName: 'HDFC_Bank_Statement_Sep2026.pdf',
-      bankName: 'HDFC Bank',
-      periodStart: '2026-09-01',
-      periodEnd: '2026-09-06',
-      totalParsed: sampleTxns.length,
-      totalCategorized: 6,
-      transactions: sampleTxns,
-      isScanned: false,
-    });
-    setTransactions(sampleTxns);
-  };
-
   const handleUpdateCategory = (id: string, categoryId: string) => {
     setTransactions((prev) =>
       prev.map((t) => (t.id === id ? { ...t, categoryId, confidence: 1.0 } : t))
@@ -272,11 +156,11 @@ export const ImportPage: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+          <div className="pt-2">
             <button
               onClick={handleStartParsing}
               disabled={!file || isParsing}
-              className="w-full sm:flex-1 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-lg shadow-brand-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-lg shadow-brand-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isParsing ? (
                 <>
@@ -289,14 +173,6 @@ export const ImportPage: React.FC = () => {
                   <span>Extract Transactions</span>
                 </>
               )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleLoadSampleStatement}
-              className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors"
-            >
-              Load Demo Statement
             </button>
           </div>
         </div>

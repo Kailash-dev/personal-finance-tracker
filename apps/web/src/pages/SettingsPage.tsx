@@ -52,7 +52,7 @@ export const SettingsPage: React.FC = () => {
     if (!newPattern || !newMerchant) return;
 
     await dataProvider.addCustomRule({
-      userId: 'user_demo_1',
+      userId: user?.id || 'user_1',
       pattern: newPattern,
       merchantName: newMerchant,
       categoryId: newCategory,
@@ -94,9 +94,9 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  const handleResetDemo = () => {
-    if (window.confirm('Reset all financial records back to initial realistic Indian demo data?')) {
-      storageService.resetToDemo();
+  const handleClearData = () => {
+    if (window.confirm('Clear all your financial records and start fresh? This action cannot be undone.')) {
+      storageService.clearAllData();
       triggerRefresh();
       window.location.reload();
     }
@@ -292,11 +292,11 @@ export const SettingsPage: React.FC = () => {
           </label>
 
           <button
-            onClick={handleResetDemo}
+            onClick={handleClearData}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 font-semibold text-xs border border-rose-200 dark:border-rose-900/40 transition-colors ml-auto"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Reset Demo Data</span>
+            <span>Clear All Data</span>
           </button>
         </div>
       </div>
