@@ -1039,6 +1039,7 @@ export const DebtsPage: React.FC = () => {
                   const config = DEBT_TYPE_CONFIG[debt.type] || DEBT_TYPE_CONFIG.OTHER_OUTGOING;
                   const Icon = config.icon;
                   const emi = calculateEmiDetails(debt);
+                  const isCreditCard = debt.type === 'CREDIT_CARD_MIN_PAYMENT';
 
                   return (
                     <div
@@ -1048,7 +1049,9 @@ export const DebtsPage: React.FC = () => {
                       {/* Top Accent Stripe based on urgency */}
                       <div
                         className={`absolute top-0 inset-x-0 h-1 ${
-                          emi.remainingEmis === 1
+                          isCreditCard
+                            ? 'bg-purple-500'
+                            : emi.remainingEmis === 1
                             ? 'bg-amber-500'
                             : emi.remainingEmis === 0
                             ? 'bg-emerald-500'
@@ -1079,46 +1082,59 @@ export const DebtsPage: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* Remaining EMIs Highlight Badge */}
+                        {/* Remaining EMIs / Min Due Highlight Badge */}
                         <div className="mt-3 flex items-center justify-between gap-2">
-                          <span
-                            className={`text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm ${
-                              emi.remainingEmis === 1
-                                ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border border-amber-400/40'
+                          {isCreditCard ? (
+                            <span className="text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm bg-purple-50 text-purple-900 dark:bg-purple-950/70 dark:text-purple-200 border border-purple-200 dark:border-purple-800">
+                              <CreditCard className="w-3.5 h-3.5 text-purple-600" />
+                              <span>💳 Revolving Card • Min Due: {formatINR(debt.monthlyEmi)}</span>
+                            </span>
+                          ) : (
+                            <span
+                              className={`text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm ${
+                                emi.remainingEmis === 1
+                                  ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border border-amber-400/40'
+                                  : emi.remainingEmis === 0
+                                  ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-400/40'
+                                  : 'bg-indigo-50 text-indigo-900 dark:bg-indigo-950/70 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800'
+                              }`}
+                            >
+                              <Clock className="w-3.5 h-3.5" />
+                              {emi.remainingEmis === 1
+                                ? `🔥 FINAL EMI LEFT (${emi.paidEmis} of ${emi.totalEmis} Paid)`
                                 : emi.remainingEmis === 0
-                                ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-400/40'
-                                : 'bg-indigo-50 text-indigo-900 dark:bg-indigo-950/70 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800'
-                            }`}
-                          >
-                            <Clock className="w-3.5 h-3.5" />
-                            {emi.remainingEmis === 1
-                              ? `🔥 FINAL EMI LEFT (${emi.paidEmis} of ${emi.totalEmis} Paid)`
-                              : emi.remainingEmis === 0
-                              ? `✓ FULLY SETTLED & PAID`
-                              : `⏳ ${emi.remainingEmis} EMIs Left (${emi.paidEmis} of ${emi.totalEmis} Paid)`}
-                          </span>
+                                ? `✓ FULLY SETTLED & PAID`
+                                : `⏳ ${emi.remainingEmis} EMIs Left (${emi.paidEmis} of ${emi.totalEmis} Paid)`}
+                            </span>
+                          )}
 
                           <span className="text-[11px] font-bold text-slate-400">
                             {emi.progressPercentage.toFixed(0)}% Paid
                           </span>
                         </div>
 
-                        {/* Monthly EMI Amount Box */}
+                        {/* Monthly Payment Box */}
                         <div className="mt-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-                          <span className="text-xs text-slate-500 font-medium">Monthly Installment:</span>
+                          <span className="text-xs text-slate-500 font-medium">
+                            {isCreditCard ? 'Minimum Amount Due (MAD):' : 'Monthly Installment:'}
+                          </span>
                           <span className="text-base font-black text-brand-600 dark:text-brand-400">
-                            {formatINR(debt.monthlyEmi)}/mo
+                            {formatINR(debt.monthlyEmi)}{isCreditCard ? ' (Min Due)' : '/mo'}
                           </span>
                         </div>
 
                         {/* 3-Column Totals Breakdown (Original Total | Paid So Far | Remaining Due) */}
                         <div className="grid grid-cols-3 gap-2 mt-2.5 p-2.5 rounded-2xl bg-slate-100/70 dark:bg-slate-800/40 text-center border border-slate-200/40 dark:border-slate-700/40">
                           <div>
-                            <span className="block text-[10px] font-bold text-slate-400 uppercase">Total Loan</span>
+                            <span className="block text-[10px] font-bold text-slate-400 uppercase">
+                              {isCreditCard ? 'Card Total / Limit' : 'Total Loan'}
+                            </span>
                             <span className="text-xs font-black text-slate-800 dark:text-slate-200">
                               {formatINR(debt.originalAmount)}
                             </span>
-                            <span className="block text-[9px] text-slate-400 font-semibold">{emi.totalEmis} EMIs</span>
+                            <span className="block text-[9px] text-slate-400 font-semibold">
+                              {isCreditCard ? 'Revolving' : `${emi.totalEmis} EMIs`}
+                            </span>
                           </div>
 
                           <div className="border-x border-slate-200 dark:border-slate-700/60 px-1">
@@ -1126,15 +1142,21 @@ export const DebtsPage: React.FC = () => {
                             <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
                               {formatINR(emi.paidAmount)}
                             </span>
-                            <span className="block text-[9px] text-emerald-600/80 font-semibold">{emi.paidEmis} Paid</span>
+                            <span className="block text-[9px] text-emerald-600/80 font-semibold">
+                              {isCreditCard ? 'Cleared' : `${emi.paidEmis} Paid`}
+                            </span>
                           </div>
 
                           <div>
-                            <span className="block text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase">Remaining</span>
+                            <span className="block text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase">
+                              {isCreditCard ? 'Outstanding Due' : 'Remaining'}
+                            </span>
                             <span className="text-xs font-black text-rose-600 dark:text-rose-400">
                               {formatINR(debt.outstandingAmount)}
                             </span>
-                            <span className="block text-[9px] text-rose-600/80 font-semibold">{emi.remainingEmis} Left</span>
+                            <span className="block text-[9px] text-rose-600/80 font-semibold">
+                              {isCreditCard ? `Min Due: ${formatINR(debt.monthlyEmi)}` : `${emi.remainingEmis} Left`}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1173,7 +1195,7 @@ export const DebtsPage: React.FC = () => {
                           <button
                             onClick={() => handleOpenEditModal(debt)}
                             className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-bold text-[11px] border border-blue-500/20 transition-colors flex items-center gap-1"
-                            title="Edit EMI details, tenure, paid/remaining EMIs, or outstanding balance"
+                            title="Edit details, min due, tenure, or outstanding balance"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                             <span>Edit</span>
@@ -1182,10 +1204,10 @@ export const DebtsPage: React.FC = () => {
                           <button
                             onClick={() => handleOpenPayModal(debt)}
                             className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] border border-emerald-500/20 transition-colors flex items-center gap-1"
-                            title="Log this month payment"
+                            title={isCreditCard ? 'Log Minimum Due payment' : 'Log this month payment'}
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Log EMI Paid</span>
+                            <span>{isCreditCard ? 'Log Min Due Paid' : 'Log EMI Paid'}</span>
                           </button>
 
                           <button
@@ -1703,16 +1725,23 @@ export const DebtsPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Monthly Planned Amount (₹)
+                    {type === 'CREDIT_CARD_MIN_PAYMENT'
+                      ? 'Current Minimum Amount Due (MAD) (₹)'
+                      : 'Monthly Planned Amount (₹)'}
                   </label>
                   <input
                     type="number"
                     required
-                    placeholder="e.g. 12000"
+                    placeholder={type === 'CREDIT_CARD_MIN_PAYMENT' ? 'e.g. 5000 (Min Due)' : 'e.g. 12000'}
                     value={monthlyEmi}
                     onChange={(e) => setMonthlyEmi(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold"
                   />
+                  {type === 'CREDIT_CARD_MIN_PAYMENT' && (
+                    <span className="block text-[10px] text-purple-600 dark:text-purple-400 font-medium mt-1">
+                      💡 Credit cards use variable Minimum Amount Due rather than a fixed EMI.
+                    </span>
+                  )}
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -1858,7 +1887,9 @@ export const DebtsPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Monthly EMI Amount (₹)
+                    {editType === 'CREDIT_CARD_MIN_PAYMENT'
+                      ? 'Current Minimum Amount Due (MAD) (₹)'
+                      : 'Monthly EMI Amount (₹)'}
                   </label>
                   <input
                     type="number"
@@ -1871,15 +1902,20 @@ export const DebtsPage: React.FC = () => {
                       const emiNum = parseFloat(newEmi) || 0;
                       const tenureNum = parseInt(editTotalTenureMonths, 10) || 0;
                       const remNum = parseInt(editEmisRemaining, 10) || 0;
-                      if (emiNum > 0 && tenureNum > 0) {
+                      if (emiNum > 0 && tenureNum > 0 && editType !== 'CREDIT_CARD_MIN_PAYMENT') {
                         setEditOriginalAmount((emiNum * tenureNum).toString());
                       }
-                      if (emiNum > 0 && remNum >= 0) {
+                      if (emiNum > 0 && remNum >= 0 && editType !== 'CREDIT_CARD_MIN_PAYMENT') {
                         setEditOutstandingAmount((emiNum * remNum).toString());
                       }
                     }}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-brand-600"
                   />
+                  {editType === 'CREDIT_CARD_MIN_PAYMENT' && (
+                    <span className="block text-[10px] text-purple-600 dark:text-purple-400 font-medium mt-1">
+                      💡 Credit cards have variable Minimum Amount Due rather than a fixed tenure EMI.
+                    </span>
+                  )}
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
