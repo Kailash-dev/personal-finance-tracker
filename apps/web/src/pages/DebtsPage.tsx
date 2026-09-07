@@ -3,7 +3,7 @@ import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
 import { dataProvider } from '../services/dataProvider';
 import { Debt, DebtType, Borrowing, BorrowingType, IncomeStream, IncomeStreamType, CibilProfile } from '@personal-finance/types';
-import { formatINR, calculateDebtSummary, calculateIncomeSummary, calculateEmiDetails } from '@personal-finance/shared';
+import { formatINR, calculateDebtSummary, calculateIncomeSummary, calculateEmiDetails, calculateCreditCardDetails } from '@personal-finance/shared';
 import { format, parseISO } from 'date-fns';
 import {
   CreditCard,
@@ -202,6 +202,10 @@ export const DebtsPage: React.FC = () => {
   const [emisPaid, setEmisPaid] = useState('');
   const [dueDay, setDueDay] = useState('10');
   const [notes, setNotes] = useState('');
+  const [cardTotalDue, setCardTotalDue] = useState('');
+  const [cardMinDue, setCardMinDue] = useState('');
+  const [cardLimit, setCardLimit] = useState('');
+  const [cardStatementDate, setCardStatementDate] = useState('25');
 
   // Edit Debt State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -218,6 +222,10 @@ export const DebtsPage: React.FC = () => {
   const [editEmisRemaining, setEditEmisRemaining] = useState('');
   const [editDueDay, setEditDueDay] = useState('10');
   const [editNotes, setEditNotes] = useState('');
+  const [editCardTotalDue, setEditCardTotalDue] = useState('');
+  const [editCardMinDue, setEditCardMinDue] = useState('');
+  const [editCardLimit, setEditCardLimit] = useState('');
+  const [editCardStatementDate, setEditCardStatementDate] = useState('25');
 
   // Short-Term Borrowings & Hand Loans State
   const [borrowings, setBorrowings] = useState<Borrowing[]>([]);
@@ -303,6 +311,8 @@ export const DebtsPage: React.FC = () => {
     setInterestRate(
       presetType === 'PERSONAL_BORROWING'
         ? '24' // 24% p.a. (2% per month standard for hand loans on interest)
+        : presetType === 'CREDIT_CARD_MIN_PAYMENT'
+        ? '42' // ~3.5% monthly APR standard for cards
         : presetType === 'CHIT_FUND_VC' ||
           presetType === 'RENT_HOUSING' ||
           presetType === 'GROCERIES_FOOD' ||
@@ -316,20 +326,36 @@ export const DebtsPage: React.FC = () => {
     );
     setDueDay('10');
     setNotes('');
+    if (presetType === 'CREDIT_CARD_MIN_PAYMENT') {
+      setCardTotalDue('50000');
+      setCardMinDue('5000');
+      setMonthlyEmi('5000');
+      setCardLimit('100000');
+      setCardStatementDate('25');
+      setDueDay('15');
+      setOriginalAmount('50000');
+      setOutstandingAmount('50000');
+    }
     setIsAddModalOpen(true);
   };
 
   const handleAddDebt = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !lender || !monthlyEmi) return;
+    if (!name || !lender || (!monthlyEmi && !cardMinDue)) return;
 
     try {
-      const emiNum = parseFloat(monthlyEmi);
-      const tenureNum = parseInt(totalTenureMonths, 10) || Math.max(1, Math.round((parseFloat(originalAmount) || emiNum * 12) / emiNum));
+      const isCard = type === 'CREDIT_CARD_MIN_PAYMENT';
+      const totalDueNum = isCard && cardTotalDue ? parseFloat(cardTotalDue) : undefined;
+      const minDueNum = isCard && (cardMinDue || monthlyEmi) ? parseFloat(cardMinDue || monthlyEmi) : undefined;
+      const limitNum = isCard && cardLimit ? parseFloat(cardLimit) : undefined;
+      const stmtDayNum = isCard && cardStatementDate ? parseInt(cardStatementDate, 10) : undefined;
+
+      const emiNum = isCard && minDueNum ? minDueNum : (parseFloat(monthlyEmi) || 0);
+      const tenureNum = parseInt(totalTenureMonths, 10) || Math.max(1, Math.round((parseFloat(originalAmount) || emiNum * 12) / (emiNum || 1)));
       const paidNum = parseInt(emisPaid, 10) || 0;
       const remNum = Math.max(0, tenureNum - paidNum);
-      const orig = parseFloat(originalAmount) || emiNum * tenureNum;
-      const out = parseFloat(outstandingAmount) || emiNum * remNum;
+      const orig = isCard && totalDueNum ? totalDueNum : (parseFloat(originalAmount) || emiNum * tenureNum);
+      const out = isCard && totalDueNum ? totalDueNum : (parseFloat(outstandingAmount) || emiNum * remNum);
 
       await dataProvider.createDebt({
         userId: authUser?.id || user?.id || 'user_1',
@@ -338,7 +364,7 @@ export const DebtsPage: React.FC = () => {
         type,
         originalAmount: orig,
         outstandingAmount: out,
-        interestRate: parseFloat(interestRate) || 0,
+        interestRate: parseFloat(interestRate) || (isCard ? 42 : 0),
         monthlyEmi: emiNum,
         totalTenureMonths: tenureNum,
         emisPaid: paidNum,
@@ -346,6 +372,10 @@ export const DebtsPage: React.FC = () => {
         startDate: new Date().toISOString().split('T')[0],
         dueDay: parseInt(dueDay, 10) || 10,
         notes,
+        totalDueAmount: totalDueNum,
+        minimumDueAmount: minDueNum,
+        creditLimit: limitNum,
+        statementDate: stmtDayNum,
       });
 
       setIsAddModalOpen(false);
@@ -356,6 +386,9 @@ export const DebtsPage: React.FC = () => {
       setMonthlyEmi('');
       setTotalTenureMonths('');
       setEmisPaid('');
+      setCardTotalDue('');
+      setCardMinDue('');
+      setCardLimit('');
       triggerRefresh();
     } catch (err) {
       console.error(err);
@@ -371,7 +404,10 @@ export const DebtsPage: React.FC = () => {
 
   const handleOpenPayModal = (debt: Debt) => {
     setSelectedDebtToPay(debt);
-    setPayAmount(debt.monthlyEmi.toString());
+    const initialAmount = debt.type === 'CREDIT_CARD_MIN_PAYMENT'
+      ? (debt.minimumDueAmount || debt.monthlyEmi || Math.max(500, Math.round((debt.totalDueAmount || debt.outstandingAmount || debt.originalAmount) * 0.05))).toString()
+      : debt.monthlyEmi.toString();
+    setPayAmount(initialAmount);
     setIsPayModalOpen(true);
   };
 
@@ -406,39 +442,60 @@ export const DebtsPage: React.FC = () => {
     setEditEmisRemaining(remaining.toString());
     setEditOriginalAmount(debt.originalAmount?.toString() || (debt.monthlyEmi * tenure).toString());
     setEditOutstandingAmount(debt.outstandingAmount?.toString() || (debt.monthlyEmi * remaining).toString());
-    setEditInterestRate(debt.interestRate?.toString() || '0');
+    setEditInterestRate(debt.interestRate?.toString() || (debt.type === 'CREDIT_CARD_MIN_PAYMENT' ? '42' : '0'));
     setEditDueDay(debt.dueDay?.toString() || '10');
     setEditNotes(debt.notes || '');
+
+    // Credit card specific fields
+    const totalDue = debt.totalDueAmount || debt.outstandingAmount || debt.originalAmount || 0;
+    const minDue = debt.minimumDueAmount || debt.monthlyEmi || Math.max(500, Math.round(totalDue * 0.05));
+    setEditCardTotalDue(totalDue.toString());
+    setEditCardMinDue(minDue.toString());
+    setEditCardLimit((debt.creditLimit || Math.max(50000, totalDue * 1.5)).toString());
+    setEditCardStatementDate(debt.statementDate?.toString() || '25');
+
     setIsEditModalOpen(true);
   };
 
   const handleSaveEditDebt = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDebtToEdit || !editName || !editLender || !editMonthlyEmi) return;
+    if (!selectedDebtToEdit || !editName || !editLender || (!editMonthlyEmi && !editCardMinDue)) return;
 
     try {
-      const emiNum = parseFloat(editMonthlyEmi) || 0;
+      const isCard = editType === 'CREDIT_CARD_MIN_PAYMENT';
+      const totalDueNum = isCard && editCardTotalDue ? parseFloat(editCardTotalDue) : undefined;
+      const minDueNum = isCard && (editCardMinDue || editMonthlyEmi) ? parseFloat(editCardMinDue || editMonthlyEmi) : undefined;
+      const limitNum = isCard && editCardLimit ? parseFloat(editCardLimit) : undefined;
+      const stmtDayNum = isCard && editCardStatementDate ? parseInt(editCardStatementDate, 10) : undefined;
+
+      const emiNum = isCard && minDueNum ? minDueNum : (parseFloat(editMonthlyEmi) || 0);
       const tenureNum = parseInt(editTotalTenureMonths, 10) || 1;
       const paidNum = parseInt(editEmisPaid, 10) || 0;
       const remNum = editEmisRemaining !== '' ? parseInt(editEmisRemaining, 10) : Math.max(0, tenureNum - paidNum);
-      const orig = parseFloat(editOriginalAmount) || emiNum * tenureNum;
-      const out = editOutstandingAmount !== '' && !isNaN(parseFloat(editOutstandingAmount))
-        ? parseFloat(editOutstandingAmount)
-        : emiNum * remNum;
+      const orig = isCard && totalDueNum ? totalDueNum : (parseFloat(editOriginalAmount) || emiNum * tenureNum);
+      const out = isCard && totalDueNum
+        ? totalDueNum
+        : (editOutstandingAmount !== '' && !isNaN(parseFloat(editOutstandingAmount))
+          ? parseFloat(editOutstandingAmount)
+          : emiNum * remNum);
 
       await dataProvider.updateDebt(selectedDebtToEdit.id, {
         name: editName,
         lender: editLender,
         type: editType,
-        monthlyEmi: emiNum,
+        monthlyEmi: isCard && minDueNum ? minDueNum : emiNum,
         totalTenureMonths: tenureNum,
         emisPaid: paidNum,
         emisRemaining: remNum,
         originalAmount: orig,
         outstandingAmount: out,
-        interestRate: parseFloat(editInterestRate) || 0,
+        interestRate: parseFloat(editInterestRate) || (isCard ? 42 : 0),
         dueDay: parseInt(editDueDay, 10) || 10,
         notes: editNotes,
+        totalDueAmount: totalDueNum,
+        minimumDueAmount: minDueNum,
+        creditLimit: limitNum,
+        statementDate: stmtDayNum,
       });
 
       setIsEditModalOpen(false);
@@ -1040,17 +1097,22 @@ export const DebtsPage: React.FC = () => {
                   const Icon = config.icon;
                   const emi = calculateEmiDetails(debt);
                   const isCreditCard = debt.type === 'CREDIT_CARD_MIN_PAYMENT';
+                  const cardDetails = isCreditCard ? calculateCreditCardDetails(debt) : null;
 
                   return (
                     <div
                       key={debt.id}
-                      className="glass-card p-5 space-y-3.5 hover:shadow-xl transition-all flex flex-col justify-between border border-slate-200 dark:border-slate-800 relative overflow-hidden group"
+                      className={`glass-card p-5 space-y-3.5 hover:shadow-xl transition-all flex flex-col justify-between border relative overflow-hidden group ${
+                        isCreditCard
+                          ? 'border-purple-200 dark:border-purple-800/60 bg-gradient-to-br from-white via-purple-50/20 to-white dark:from-slate-900 dark:via-purple-950/20 dark:to-slate-900'
+                          : 'border-slate-200 dark:border-slate-800'
+                      }`}
                     >
                       {/* Top Accent Stripe based on urgency */}
                       <div
                         className={`absolute top-0 inset-x-0 h-1 ${
                           isCreditCard
-                            ? 'bg-purple-500'
+                            ? 'bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-600'
                             : emi.remainingEmis === 1
                             ? 'bg-amber-500'
                             : emi.remainingEmis === 0
@@ -1063,7 +1125,11 @@ export const DebtsPage: React.FC = () => {
                         {/* Top Bar */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-2.5 min-w-0">
-                            <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                              isCreditCard
+                                ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400'
+                                : 'bg-slate-100 dark:bg-slate-800'
+                            }`}>
                               <Icon className={`w-5 h-5 ${config.color}`} />
                             </div>
                             <div className="min-w-0">
@@ -1072,7 +1138,11 @@ export const DebtsPage: React.FC = () => {
                               </h4>
                               <p className="text-[11px] text-slate-400 mt-0.5 truncate">
                                 {debt.lender}
-                                {debt.interestRate > 0 && <span> • {debt.interestRate}% p.a.</span>}
+                                {isCreditCard && cardDetails ? (
+                                  <span> • Limit: {formatINR(cardDetails.creditLimit)} • Stmt on {debt.statementDate || 25}th</span>
+                                ) : debt.interestRate > 0 ? (
+                                  <span> • {debt.interestRate}% p.a.</span>
+                                ) : null}
                               </p>
                             </div>
                           </div>
@@ -1082,102 +1152,169 @@ export const DebtsPage: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* Remaining EMIs / Min Due Highlight Badge */}
-                        <div className="mt-3 flex items-center justify-between gap-2">
-                          {isCreditCard ? (
-                            <span className="text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm bg-purple-50 text-purple-900 dark:bg-purple-950/70 dark:text-purple-200 border border-purple-200 dark:border-purple-800">
-                              <CreditCard className="w-3.5 h-3.5 text-purple-600" />
-                              <span>💳 Revolving Card • Min Due: {formatINR(debt.monthlyEmi)}</span>
-                            </span>
-                          ) : (
-                            <span
-                              className={`text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm ${
-                                emi.remainingEmis === 1
-                                  ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border border-amber-400/40'
+                        {/* Credit Card Specific View vs Regular Loan View */}
+                        {isCreditCard && cardDetails ? (
+                          <div className="mt-3 space-y-2.5">
+                            {/* Dual-Box: Total Statement Due vs Minimum Due */}
+                            <div className="grid grid-cols-2 gap-2">
+                              {/* Box 1: Total Due */}
+                              <div className="p-2.5 rounded-2xl bg-slate-100/80 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                                <span className="block text-[9px] font-bold uppercase text-slate-500 dark:text-slate-400">
+                                  Full Statement Due (TAD)
+                                </span>
+                                <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                                  {formatINR(cardDetails.totalDueAmount)}
+                                </span>
+                                <span className="block text-[9px] text-slate-400 font-medium">
+                                  Full bill generated
+                                </span>
+                              </div>
+
+                              {/* Box 2: Minimum Due (Highlighted) */}
+                              <div className="p-2.5 rounded-2xl bg-purple-50 dark:bg-purple-950/60 border border-purple-300 dark:border-purple-700/80 relative">
+                                <div className="flex items-center justify-between">
+                                  <span className="block text-[9px] font-extrabold uppercase text-purple-800 dark:text-purple-300">
+                                    Min Due (MAD)
+                                  </span>
+                                  <span className="text-[8px] font-black px-1.5 py-0.2 rounded bg-purple-200 dark:bg-purple-900 text-purple-900 dark:text-purple-200">
+                                    ⚡ Paying
+                                  </span>
+                                </div>
+                                <span className="text-sm font-black text-purple-700 dark:text-purple-300">
+                                  {formatINR(cardDetails.minimumDueAmount)}
+                                </span>
+                                <span className="block text-[9px] text-purple-600/80 dark:text-purple-400 font-medium">
+                                  Avoids late fee
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Revolving Finance Charge Radar */}
+                            <div className="p-2 rounded-xl bg-purple-100/50 dark:bg-purple-950/40 border border-purple-200/60 dark:border-purple-800/40 text-[10px] text-purple-900 dark:text-purple-200 space-y-0.5">
+                              <div className="flex items-center justify-between font-bold">
+                                <span>Revolving Balance: {formatINR(cardDetails.revolvingBalance)}</span>
+                                <span className="text-rose-600 dark:text-rose-400">~{formatINR(cardDetails.estimatedMonthlyFinanceCharge)}/mo finance fee</span>
+                              </div>
+                              <p className="text-[9px] text-slate-500 dark:text-slate-400">
+                                Minimum due payment protects CIBIL on-time track record; balance revolves at ~3.5%/mo.
+                              </p>
+                            </div>
+
+                            {/* Credit Utilization Bar */}
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                                <span>Credit Utilization (CUR): <strong>{cardDetails.creditUtilizationRatio}%</strong></span>
+                                <span className={`font-bold ${cardDetails.creditUtilizationRatio <= 30 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                  {cardDetails.creditUtilizationRatio <= 30 ? '✓ Optimal (<30%)' : '⚠ High Utilization'}
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    cardDetails.creditUtilizationRatio <= 30
+                                      ? 'bg-emerald-500'
+                                      : cardDetails.creditUtilizationRatio <= 60
+                                      ? 'bg-amber-500'
+                                      : 'bg-rose-500'
+                                  }`}
+                                  style={{ width: `${Math.min(100, Math.max(5, cardDetails.creditUtilizationRatio))}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Remaining EMIs Highlight Badge */}
+                            <div className="mt-3 flex items-center justify-between gap-2">
+                              <span
+                                className={`text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm ${
+                                  emi.remainingEmis === 1
+                                    ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border border-amber-400/40'
+                                    : emi.remainingEmis === 0
+                                    ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-400/40'
+                                    : 'bg-indigo-50 text-indigo-900 dark:bg-indigo-950/70 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800'
+                                }`}
+                              >
+                                <Clock className="w-3.5 h-3.5" />
+                                {emi.remainingEmis === 1
+                                  ? `🔥 FINAL EMI LEFT (${emi.paidEmis} of ${emi.totalEmis} Paid)`
                                   : emi.remainingEmis === 0
-                                  ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-400/40'
-                                  : 'bg-indigo-50 text-indigo-900 dark:bg-indigo-950/70 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800'
-                              }`}
-                            >
-                              <Clock className="w-3.5 h-3.5" />
-                              {emi.remainingEmis === 1
-                                ? `🔥 FINAL EMI LEFT (${emi.paidEmis} of ${emi.totalEmis} Paid)`
-                                : emi.remainingEmis === 0
-                                ? `✓ FULLY SETTLED & PAID`
-                                : `⏳ ${emi.remainingEmis} EMIs Left (${emi.paidEmis} of ${emi.totalEmis} Paid)`}
-                            </span>
-                          )}
+                                  ? `✓ FULLY SETTLED & PAID`
+                                  : `⏳ ${emi.remainingEmis} EMIs Left (${emi.paidEmis} of ${emi.totalEmis} Paid)`}
+                              </span>
 
-                          <span className="text-[11px] font-bold text-slate-400">
-                            {emi.progressPercentage.toFixed(0)}% Paid
-                          </span>
-                        </div>
+                              <span className="text-[11px] font-bold text-slate-400">
+                                {emi.progressPercentage.toFixed(0)}% Paid
+                              </span>
+                            </div>
 
-                        {/* Monthly Payment Box */}
-                        <div className="mt-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-                          <span className="text-xs text-slate-500 font-medium">
-                            {isCreditCard ? 'Minimum Amount Due (MAD):' : 'Monthly Installment:'}
-                          </span>
-                          <span className="text-base font-black text-brand-600 dark:text-brand-400">
-                            {formatINR(debt.monthlyEmi)}{isCreditCard ? ' (Min Due)' : '/mo'}
-                          </span>
-                        </div>
+                            {/* Monthly Payment Box */}
+                            <div className="mt-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+                              <span className="text-xs text-slate-500 font-medium">
+                                Monthly Installment:
+                              </span>
+                              <span className="text-base font-black text-brand-600 dark:text-brand-400">
+                                {formatINR(debt.monthlyEmi)}/mo
+                              </span>
+                            </div>
 
-                        {/* 3-Column Totals Breakdown (Original Total | Paid So Far | Remaining Due) */}
-                        <div className="grid grid-cols-3 gap-2 mt-2.5 p-2.5 rounded-2xl bg-slate-100/70 dark:bg-slate-800/40 text-center border border-slate-200/40 dark:border-slate-700/40">
-                          <div>
-                            <span className="block text-[10px] font-bold text-slate-400 uppercase">
-                              {isCreditCard ? 'Card Total / Limit' : 'Total Loan'}
-                            </span>
-                            <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-                              {formatINR(debt.originalAmount)}
-                            </span>
-                            <span className="block text-[9px] text-slate-400 font-semibold">
-                              {isCreditCard ? 'Revolving' : `${emi.totalEmis} EMIs`}
-                            </span>
-                          </div>
+                            {/* 3-Column Totals Breakdown (Original Total | Paid So Far | Remaining Due) */}
+                            <div className="grid grid-cols-3 gap-2 mt-2.5 p-2.5 rounded-2xl bg-slate-100/70 dark:bg-slate-800/40 text-center border border-slate-200/40 dark:border-slate-700/40">
+                              <div>
+                                <span className="block text-[10px] font-bold text-slate-400 uppercase">
+                                  Total Loan
+                                </span>
+                                <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                                  {formatINR(debt.originalAmount)}
+                                </span>
+                                <span className="block text-[9px] text-slate-400 font-semibold">
+                                  {emi.totalEmis} EMIs
+                                </span>
+                              </div>
 
-                          <div className="border-x border-slate-200 dark:border-slate-700/60 px-1">
-                            <span className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Paid Total</span>
-                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                              {formatINR(emi.paidAmount)}
-                            </span>
-                            <span className="block text-[9px] text-emerald-600/80 font-semibold">
-                              {isCreditCard ? 'Cleared' : `${emi.paidEmis} Paid`}
-                            </span>
-                          </div>
+                              <div className="border-x border-slate-200 dark:border-slate-700/60 px-1">
+                                <span className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Paid Total</span>
+                                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                                  {formatINR(emi.paidAmount)}
+                                </span>
+                                <span className="block text-[9px] text-emerald-600/80 font-semibold">
+                                  {emi.paidEmis} Paid
+                                </span>
+                              </div>
 
-                          <div>
-                            <span className="block text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase">
-                              {isCreditCard ? 'Outstanding Due' : 'Remaining'}
-                            </span>
-                            <span className="text-xs font-black text-rose-600 dark:text-rose-400">
-                              {formatINR(debt.outstandingAmount)}
-                            </span>
-                            <span className="block text-[9px] text-rose-600/80 font-semibold">
-                              {isCreditCard ? `Min Due: ${formatINR(debt.monthlyEmi)}` : `${emi.remainingEmis} Left`}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                              <div>
+                                <span className="block text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase">
+                                  Remaining
+                                </span>
+                                <span className="text-xs font-black text-rose-600 dark:text-rose-400">
+                                  {formatINR(debt.outstandingAmount)}
+                                </span>
+                                <span className="block text-[9px] text-rose-600/80 font-semibold">
+                                  {emi.remainingEmis} Left
+                                </span>
+                              </div>
+                            </div>
 
-                      {/* Progress bar with completion date */}
-                      <div className="space-y-1 pt-1">
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-brand-500 via-indigo-500 to-emerald-500 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(100, Math.max(5, emi.progressPercentage))}%` }}
-                          />
-                        </div>
+                            {/* Progress bar with completion date */}
+                            <div className="space-y-1 pt-1">
+                              <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-brand-500 via-indigo-500 to-emerald-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${Math.min(100, Math.max(5, emi.progressPercentage))}%` }}
+                                />
+                              </div>
 
-                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                          <span>Progress: {emi.progressPercentage.toFixed(0)}%</span>
-                          <span>
-                            {emi.projectedPayoffDate
-                              ? `Payoff: ${format(parseISO(emi.projectedPayoffDate), 'MMM yyyy')}`
-                              : 'Settled'}
-                          </span>
-                        </div>
+                              <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                                <span>Progress: {emi.progressPercentage.toFixed(0)}%</span>
+                                <span>
+                                  {emi.projectedPayoffDate
+                                    ? `Payoff: ${format(parseISO(emi.projectedPayoffDate), 'MMM yyyy')}`
+                                    : 'Settled'}
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       {/* Bottom details & Actions */}
@@ -1722,70 +1859,182 @@ export const DebtsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    {type === 'CREDIT_CARD_MIN_PAYMENT'
-                      ? 'Current Minimum Amount Due (MAD) (₹)'
-                      : 'Monthly Planned Amount (₹)'}
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    placeholder={type === 'CREDIT_CARD_MIN_PAYMENT' ? 'e.g. 5000 (Min Due)' : 'e.g. 12000'}
-                    value={monthlyEmi}
-                    onChange={(e) => setMonthlyEmi(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold"
-                  />
-                  {type === 'CREDIT_CARD_MIN_PAYMENT' && (
-                    <span className="block text-[10px] text-purple-600 dark:text-purple-400 font-medium mt-1">
-                      💡 Credit cards use variable Minimum Amount Due rather than a fixed EMI.
+              {type === 'CREDIT_CARD_MIN_PAYMENT' ? (
+                <div className="p-3.5 rounded-2xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/70 dark:border-purple-800/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                      <CreditCard className="w-4 h-4 text-purple-600" />
+                      Credit Card Statement & Due Amount
                     </span>
+                    <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-2 py-0.5 rounded-full">
+                      TAD vs MAD Mode
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-purple-900 dark:text-purple-300 mb-1">
+                        Full Statement Due (TAD) (₹)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 50000 (Total Bill)"
+                        value={cardTotalDue}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCardTotalDue(val);
+                          const num = parseFloat(val) || 0;
+                          if (num > 0 && !cardMinDue) {
+                            const autoMin = Math.max(500, Math.round(num * 0.05));
+                            setCardMinDue(autoMin.toString());
+                            setMonthlyEmi(autoMin.toString());
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 font-bold text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-purple-900 dark:text-purple-300 mb-1">
+                        Minimum Amount Due (MAD) (₹)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 2500 / 5000 (Min Due)"
+                        value={cardMinDue || monthlyEmi}
+                        onChange={(e) => {
+                          setCardMinDue(e.target.value);
+                          setMonthlyEmi(e.target.value);
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 font-bold text-brand-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Total Card Limit (₹)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="e.g. 100000"
+                        value={cardLimit}
+                        onChange={(e) => setCardLimit(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Statement Date (Day)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={cardStatementDate}
+                        onChange={(e) => setCardStatementDate(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-xs text-center"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Payment Due Day
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={dueDay}
+                        onChange={(e) => setDueDay(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-xs text-center"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Live Revolving Estimate preview */}
+                  {parseFloat(cardTotalDue) > 0 && (
+                    <div className="p-2.5 rounded-xl bg-purple-100/60 dark:bg-purple-900/30 text-[11px] text-purple-900 dark:text-purple-200 space-y-1">
+                      <div className="flex justify-between font-bold">
+                        <span>⚡ Planned Min Due Payment:</span>
+                        <span>{formatINR(parseFloat(cardMinDue || monthlyEmi) || 0)}</span>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-purple-700 dark:text-purple-300">
+                        <span>Revolving balance carried to next cycle:</span>
+                        <span>{formatINR(Math.max(0, (parseFloat(cardTotalDue) || 0) - (parseFloat(cardMinDue || monthlyEmi) || 0)))}</span>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-purple-700 dark:text-purple-300">
+                        <span>Est. Finance charge (~3.5%/mo + 18% GST):</span>
+                        <span>~{formatINR(Math.round(Math.max(0, (parseFloat(cardTotalDue) || 0) - (parseFloat(cardMinDue || monthlyEmi) || 0)) * 0.035 * 1.18))}/mo</span>
+                      </div>
+                    </div>
                   )}
                 </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Due Day of Month (1-31)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={dueDay}
-                    onChange={(e) => setDueDay(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Monthly Planned Amount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        placeholder="e.g. 12000"
+                        value={monthlyEmi}
+                        onChange={(e) => setMonthlyEmi(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Due Day of Month (1-31)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={dueDay}
+                        onChange={(e) => setDueDay(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30">
-                <div>
-                  <label className="block font-semibold text-indigo-900 dark:text-indigo-300 mb-1">
-                    Total Tenure (Total EMIs)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="e.g. 24 (Months)"
-                    value={totalTenureMonths}
-                    onChange={(e) => setTotalTenureMonths(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 font-medium"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-indigo-900 dark:text-indigo-300 mb-1">
-                    EMIs Already Paid
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 10 (Paid)"
-                    value={emisPaid}
-                    onChange={(e) => setEmisPaid(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 font-medium"
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30">
+                    <div>
+                      <label className="block font-semibold text-indigo-900 dark:text-indigo-300 mb-1">
+                        Total Tenure (Total EMIs)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 24 (Months)"
+                        value={totalTenureMonths}
+                        onChange={(e) => setTotalTenureMonths(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-indigo-900 dark:text-indigo-300 mb-1">
+                        EMIs Already Paid
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 10 (Paid)"
+                        value={emisPaid}
+                        onChange={(e) => setEmisPaid(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 font-medium"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Notes / Description</label>
@@ -1884,209 +2133,326 @@ export const DebtsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    {editType === 'CREDIT_CARD_MIN_PAYMENT'
-                      ? 'Current Minimum Amount Due (MAD) (₹)'
-                      : 'Monthly EMI Amount (₹)'}
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    required
-                    value={editMonthlyEmi}
-                    onChange={(e) => {
-                      const newEmi = e.target.value;
-                      setEditMonthlyEmi(newEmi);
-                      const emiNum = parseFloat(newEmi) || 0;
-                      const tenureNum = parseInt(editTotalTenureMonths, 10) || 0;
-                      const remNum = parseInt(editEmisRemaining, 10) || 0;
-                      if (emiNum > 0 && tenureNum > 0 && editType !== 'CREDIT_CARD_MIN_PAYMENT') {
-                        setEditOriginalAmount((emiNum * tenureNum).toString());
-                      }
-                      if (emiNum > 0 && remNum >= 0 && editType !== 'CREDIT_CARD_MIN_PAYMENT') {
-                        setEditOutstandingAmount((emiNum * remNum).toString());
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-brand-600"
-                  />
-                  {editType === 'CREDIT_CARD_MIN_PAYMENT' && (
-                    <span className="block text-[10px] text-purple-600 dark:text-purple-400 font-medium mt-1">
-                      💡 Credit cards have variable Minimum Amount Due rather than a fixed tenure EMI.
+              {editType === 'CREDIT_CARD_MIN_PAYMENT' ? (
+                <div className="p-3.5 rounded-2xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/70 dark:border-purple-800/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                      <CreditCard className="w-4 h-4 text-purple-600" />
+                      Credit Card Statement & Due Amount
                     </span>
+                    <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-2 py-0.5 rounded-full">
+                      TAD vs MAD Mode
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-purple-900 dark:text-purple-300 mb-1">
+                        Full Statement Due (TAD) (₹)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        placeholder="e.g. 50000 (Total Bill)"
+                        value={editCardTotalDue}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setEditCardTotalDue(val);
+                          const num = parseFloat(val) || 0;
+                          setEditOriginalAmount(val);
+                          setEditOutstandingAmount(val);
+                          if (num > 0 && !editCardMinDue) {
+                            const autoMin = Math.max(500, Math.round(num * 0.05));
+                            setEditCardMinDue(autoMin.toString());
+                            setEditMonthlyEmi(autoMin.toString());
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 font-bold text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-purple-900 dark:text-purple-300 mb-1">
+                        Minimum Amount Due (MAD) (₹)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        placeholder="e.g. 2500 / 5000 (Min Due)"
+                        value={editCardMinDue || editMonthlyEmi}
+                        onChange={(e) => {
+                          setEditCardMinDue(e.target.value);
+                          setEditMonthlyEmi(e.target.value);
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 font-bold text-brand-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Total Card Limit (₹)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 100000"
+                        value={editCardLimit}
+                        onChange={(e) => setEditCardLimit(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Statement Date (Day)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={editCardStatementDate}
+                        onChange={(e) => setEditCardStatementDate(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-xs text-center"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Payment Due Day
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={editDueDay}
+                        onChange={(e) => setEditDueDay(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-xs text-center"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Live Revolving Estimate preview */}
+                  {parseFloat(editCardTotalDue) > 0 && (
+                    <div className="p-2.5 rounded-xl bg-purple-100/60 dark:bg-purple-900/30 text-[11px] text-purple-900 dark:text-purple-200 space-y-1">
+                      <div className="flex justify-between font-bold">
+                        <span>⚡ Planned Min Due Payment:</span>
+                        <span>{formatINR(parseFloat(editCardMinDue || editMonthlyEmi) || 0)}</span>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-purple-700 dark:text-purple-300">
+                        <span>Revolving balance carried to next cycle:</span>
+                        <span>{formatINR(Math.max(0, (parseFloat(editCardTotalDue) || 0) - (parseFloat(editCardMinDue || editMonthlyEmi) || 0)))}</span>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-purple-700 dark:text-purple-300">
+                        <span>Est. Finance charge (~3.5%/mo + 18% GST):</span>
+                        <span>~{formatINR(Math.round(Math.max(0, (parseFloat(editCardTotalDue) || 0) - (parseFloat(editCardMinDue || editMonthlyEmi) || 0)) * 0.035 * 1.18))}/mo</span>
+                      </div>
+                    </div>
                   )}
                 </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Due Day of Month (1-31)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={editDueDay}
-                    onChange={(e) => setEditDueDay(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-              </div>
-
-              {/* Tenure & EMI Count Card */}
-              <div className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-800/40 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
-                    Tenure & Number of EMIs
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const tenure = parseInt(editTotalTenureMonths, 10) || 0;
-                      const paid = parseInt(editEmisPaid, 10) || 0;
-                      const remaining = Math.max(0, tenure - paid);
-                      setEditEmisRemaining(remaining.toString());
-                      const emi = parseFloat(editMonthlyEmi) || 0;
-                      if (emi > 0) {
-                        setEditOutstandingAmount((emi * remaining).toString());
-                      }
-                    }}
-                    className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
-                  >
-                    ⚡ Auto-Calc Left
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-indigo-800 dark:text-indigo-300 mb-1">
-                      Total Tenure (Months)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="e.g. 24 or 36"
-                      value={editTotalTenureMonths}
-                      onChange={(e) => {
-                        const newTenure = e.target.value;
-                        setEditTotalTenureMonths(newTenure);
-                        const tenureNum = parseInt(newTenure, 10) || 0;
-                        const paidNum = parseInt(editEmisPaid, 10) || 0;
-                        const remNum = Math.max(0, tenureNum - paidNum);
-                        setEditEmisRemaining(remNum.toString());
-                        const emiNum = parseFloat(editMonthlyEmi) || 0;
-                        if (emiNum > 0) {
-                          setEditOriginalAmount((emiNum * tenureNum).toString());
-                          setEditOutstandingAmount((emiNum * remNum).toString());
-                        }
-                      }}
-                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 text-xs font-bold text-center"
-                    />
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Monthly EMI Amount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        required
+                        value={editMonthlyEmi}
+                        onChange={(e) => {
+                          const newEmi = e.target.value;
+                          setEditMonthlyEmi(newEmi);
+                          const emiNum = parseFloat(newEmi) || 0;
+                          const tenureNum = parseInt(editTotalTenureMonths, 10) || 0;
+                          const remNum = parseInt(editEmisRemaining, 10) || 0;
+                          if (emiNum > 0 && tenureNum > 0) {
+                            setEditOriginalAmount((emiNum * tenureNum).toString());
+                          }
+                          if (emiNum > 0 && remNum >= 0) {
+                            setEditOutstandingAmount((emiNum * remNum).toString());
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-brand-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Due Day of Month (1-31)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={editDueDay}
+                        onChange={(e) => setEditDueDay(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-semibold text-emerald-800 dark:text-emerald-300 mb-1">
-                      EMIs Paid So Far
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="e.g. 1 or 30"
-                      value={editEmisPaid}
-                      onChange={(e) => {
-                        const newPaid = e.target.value;
-                        setEditEmisPaid(newPaid);
-                        const paidNum = parseInt(newPaid, 10) || 0;
-                        const tenureNum = parseInt(editTotalTenureMonths, 10) || 0;
-                        const remNum = Math.max(0, tenureNum - paidNum);
-                        setEditEmisRemaining(remNum.toString());
-                        const emiNum = parseFloat(editMonthlyEmi) || 0;
-                        if (emiNum > 0) {
-                          setEditOutstandingAmount((emiNum * remNum).toString());
-                        }
-                      }}
-                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-xs font-bold text-emerald-700 dark:text-emerald-300 text-center"
-                    />
+                  {/* Tenure & EMI Count Card */}
+                  <div className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-800/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                        Tenure & Number of EMIs
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const tenure = parseInt(editTotalTenureMonths, 10) || 0;
+                          const paid = parseInt(editEmisPaid, 10) || 0;
+                          const remaining = Math.max(0, tenure - paid);
+                          setEditEmisRemaining(remaining.toString());
+                          const emi = parseFloat(editMonthlyEmi) || 0;
+                          if (emi > 0) {
+                            setEditOutstandingAmount((emi * remaining).toString());
+                          }
+                        }}
+                        className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+                      >
+                        ⚡ Auto-Calc Left
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-indigo-800 dark:text-indigo-300 mb-1">
+                          Total Tenure (Months)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="e.g. 24 or 36"
+                          value={editTotalTenureMonths}
+                          onChange={(e) => {
+                            const newTenure = e.target.value;
+                            setEditTotalTenureMonths(newTenure);
+                            const tenureNum = parseInt(newTenure, 10) || 0;
+                            const paidNum = parseInt(editEmisPaid, 10) || 0;
+                            const remNum = Math.max(0, tenureNum - paidNum);
+                            setEditEmisRemaining(remNum.toString());
+                            const emiNum = parseFloat(editMonthlyEmi) || 0;
+                            if (emiNum > 0) {
+                              setEditOriginalAmount((emiNum * tenureNum).toString());
+                              setEditOutstandingAmount((emiNum * remNum).toString());
+                            }
+                          }}
+                          className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 text-xs font-bold text-center"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-semibold text-emerald-800 dark:text-emerald-300 mb-1">
+                          EMIs Paid So Far
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 1 or 30"
+                          value={editEmisPaid}
+                          onChange={(e) => {
+                            const newPaid = e.target.value;
+                            setEditEmisPaid(newPaid);
+                            const paidNum = parseInt(newPaid, 10) || 0;
+                            const tenureNum = parseInt(editTotalTenureMonths, 10) || 0;
+                            const remNum = Math.max(0, tenureNum - paidNum);
+                            setEditEmisRemaining(remNum.toString());
+                            const emiNum = parseFloat(editMonthlyEmi) || 0;
+                            if (emiNum > 0) {
+                              setEditOutstandingAmount((emiNum * remNum).toString());
+                            }
+                          }}
+                          className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-xs font-bold text-emerald-700 dark:text-emerald-300 text-center"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-semibold text-rose-800 dark:text-rose-300 mb-1">
+                          EMIs Remaining
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 23 or 6"
+                          value={editEmisRemaining}
+                          onChange={(e) => {
+                            const newRem = e.target.value;
+                            setEditEmisRemaining(newRem);
+                            const remNum = parseInt(newRem, 10) || 0;
+                            const emiNum = parseFloat(editMonthlyEmi) || 0;
+                            if (emiNum > 0) {
+                              setEditOutstandingAmount((emiNum * remNum).toString());
+                            }
+                          }}
+                          className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-700 text-xs font-bold text-rose-700 dark:text-rose-300 text-center"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-semibold text-rose-800 dark:text-rose-300 mb-1">
-                      EMIs Remaining
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="e.g. 23 or 6"
-                      value={editEmisRemaining}
-                      onChange={(e) => {
-                        const newRem = e.target.value;
-                        setEditEmisRemaining(newRem);
-                        const remNum = parseInt(newRem, 10) || 0;
-                        const emiNum = parseFloat(editMonthlyEmi) || 0;
-                        if (emiNum > 0) {
-                          setEditOutstandingAmount((emiNum * remNum).toString());
-                        }
-                      }}
-                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-700 text-xs font-bold text-rose-700 dark:text-rose-300 text-center"
-                    />
-                  </div>
-                </div>
-              </div>
+                  {/* Financial Totals Card */}
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Loan Totals & Balance Remaining
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        Directly editable for late fees or adjustments
+                      </span>
+                    </div>
 
-              {/* Financial Totals Card */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Loan Totals & Balance Remaining
-                  </span>
-                  <span className="text-[10px] text-slate-400">
-                    Directly editable for late fees or adjustments
-                  </span>
-                </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                          Total Loan Amount (₹)
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="e.g. 225000"
+                          value={editOriginalAmount}
+                          onChange={(e) => setEditOriginalAmount(e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                        />
+                      </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                      Total Loan Amount (₹)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="e.g. 225000"
-                      value={editOriginalAmount}
-                      onChange={(e) => setEditOriginalAmount(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold"
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-rose-600 dark:text-rose-400 mb-1">
+                          Remaining for Payment (₹)
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          required
+                          placeholder="e.g. 37500"
+                          value={editOutstandingAmount}
+                          onChange={(e) => setEditOutstandingAmount(e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-700 text-xs font-bold text-rose-600 dark:text-rose-400"
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-[10px] font-semibold text-rose-600 dark:text-rose-400 mb-1">
-                      Remaining for Payment (₹)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      required
-                      placeholder="e.g. 37500"
-                      value={editOutstandingAmount}
-                      onChange={(e) => setEditOutstandingAmount(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-700 text-xs font-bold text-rose-600 dark:text-rose-400"
-                    />
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                          Interest Rate (% p.a.)
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={editInterestRate}
+                          onChange={(e) => setEditInterestRate(e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium"
+                        />
+                      </div>
+                    </div>
                   </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                      Interest Rate (% p.a.)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={editInterestRate}
-                      onChange={(e) => setEditInterestRate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium"
-                    />
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Notes / Description</label>
@@ -2120,51 +2486,161 @@ export const DebtsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal 2: Log Payment Modal for Outgoing */}
-      {isPayModalOpen && selectedDebtToPay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsPayModalOpen(false)} />
-          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 z-10 animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-              <div>
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-                  Record Monthly Payment
-                </h3>
-                <p className="text-[11px] text-slate-400">{selectedDebtToPay.name}</p>
+      {/* Modal 2: Log Payment Modal for Outgoing / Debt / Credit Card */}
+      {isPayModalOpen && selectedDebtToPay && (() => {
+        const isCard = selectedDebtToPay.type === 'CREDIT_CARD_MIN_PAYMENT';
+        const cardDetails = isCard ? calculateCreditCardDetails(selectedDebtToPay) : null;
+        const currentPayNum = parseFloat(payAmount) || 0;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsPayModalOpen(false)} />
+            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 z-10 animate-in zoom-in-95">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-1.5">
+                    {isCard ? <CreditCard className="w-4 h-4 text-purple-600" /> : <Wallet className="w-4 h-4 text-brand-600" />}
+                    {isCard ? 'Record Credit Card Payment' : 'Record Monthly Payment'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">{selectedDebtToPay.name} • {selectedDebtToPay.lender}</p>
+                </div>
+                <button onClick={() => setIsPayModalOpen(false)}>
+                  <X className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+                </button>
               </div>
-              <button onClick={() => setIsPayModalOpen(false)}>
-                <X className="w-5 h-5 text-slate-400 hover:text-slate-600" />
-              </button>
+
+              <form onSubmit={handleConfirmPayment} className="space-y-4 text-xs">
+                {isCard && cardDetails ? (
+                  <div className="space-y-3">
+                    <label className="block font-bold text-slate-700 dark:text-slate-300">
+                      Choose Payment Option
+                    </label>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Option 1: Minimum Amount Due (MAD) */}
+                      <button
+                        type="button"
+                        onClick={() => setPayAmount(cardDetails.minimumDueAmount.toString())}
+                        className={`p-3 rounded-2xl border text-left transition-all relative ${
+                          currentPayNum === cardDetails.minimumDueAmount
+                            ? 'bg-purple-50 dark:bg-purple-950/60 border-purple-500 shadow-sm ring-2 ring-purple-500/20'
+                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-purple-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-bold uppercase text-purple-700 dark:text-purple-300">
+                            ⚡ Min Due (MAD)
+                          </span>
+                          <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-purple-200/80 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+                            Current Mode
+                          </span>
+                        </div>
+                        <div className="text-base font-black text-purple-700 dark:text-purple-300">
+                          {formatINR(cardDetails.minimumDueAmount)}
+                        </div>
+                        <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          Avoids late penalty & protects CIBIL score
+                        </p>
+                      </button>
+
+                      {/* Option 2: Total Amount Due (TAD) */}
+                      <button
+                        type="button"
+                        onClick={() => setPayAmount(cardDetails.totalDueAmount.toString())}
+                        className={`p-3 rounded-2xl border text-left transition-all relative ${
+                          currentPayNum === cardDetails.totalDueAmount
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 shadow-sm ring-2 ring-emerald-500/20'
+                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-emerald-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300">
+                            🌟 Full Bill (TAD)
+                          </span>
+                          <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-200/80 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
+                            0% Interest
+                          </span>
+                        </div>
+                        <div className="text-base font-black text-emerald-700 dark:text-emerald-300">
+                          {formatINR(cardDetails.totalDueAmount)}
+                        </div>
+                        <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          Clears entire statement bill
+                        </p>
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Payment Amount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        step="any"
+                        value={payAmount}
+                        onChange={(e) => setPayAmount(e.target.value)}
+                        className="w-full px-3 py-2 text-base font-extrabold rounded-xl bg-slate-50 dark:bg-slate-800 border border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400"
+                      />
+                    </div>
+
+                    {/* Dynamic Explainer */}
+                    <div className="p-3 rounded-xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-500/20 text-purple-900 dark:text-purple-200 text-[11px] space-y-1">
+                      {currentPayNum >= cardDetails.totalDueAmount ? (
+                        <div className="flex items-start gap-1.5 text-emerald-700 dark:text-emerald-300 font-semibold">
+                          <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+                          <span>✨ Full Settlement: You clear 100% of the statement bill. 0 revolving interest charged!</span>
+                        </div>
+                      ) : currentPayNum >= cardDetails.minimumDueAmount ? (
+                        <div>
+                          <div className="flex items-center gap-1.5 font-bold text-purple-800 dark:text-purple-200">
+                            <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0" />
+                            <span>Minimum Due Paid ({formatINR(currentPayNum)}):</span>
+                          </div>
+                          <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5">
+                            ✓ No late payment fees will be charged.
+                            <br />
+                            ✓ CIBIL score is marked as 100% On-Time.
+                            <br />
+                            ⏳ Remaining {formatINR(Math.max(0, cardDetails.totalDueAmount - currentPayNum))} revolves to next statement at ~3.5%/mo.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-amber-700 dark:text-amber-300 font-medium">
+                          ⚠️ Paying less than Minimum Due ({formatINR(cardDetails.minimumDueAmount)}) may attract late payment penalties from the bank.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Payment Amount (₹)</label>
+                    <input
+                      type="number"
+                      required
+                      autoFocus
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(e.target.value)}
+                      className="w-full px-3 py-2.5 text-lg font-extrabold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-brand-600"
+                    />
+                    <div className="p-3 mt-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-[11px]">
+                      💡 This will record an expense transaction for this month and automatically update your cash flow and account balance for <strong>{selectedDebtToPay.name}</strong> ({formatINR(parseFloat(payAmount) || 0)}).
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/25 flex items-center justify-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Confirm & Record Payment</span>
+                </button>
+              </form>
             </div>
-
-            <form onSubmit={handleConfirmPayment} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Payment Amount (₹)</label>
-                <input
-                  type="number"
-                  required
-                  autoFocus
-                  value={payAmount}
-                  onChange={(e) => setPayAmount(e.target.value)}
-                  className="w-full px-3 py-2.5 text-lg font-extrabold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-brand-600"
-                />
-              </div>
-
-              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-[11px]">
-                💡 This will record an expense transaction for this month and automatically update your cash flow and account balance for <strong>{selectedDebtToPay.name}</strong> ({formatINR(parseFloat(payAmount) || 0)}).
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/25 flex items-center justify-center gap-1.5"
-              >
-                <Check className="w-4 h-4" />
-                <span>Confirm & Record Payment</span>
-              </button>
-            </form>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Modal 3: Add Current Month Short-Term Borrowing / Hand Loan */}
       {isAddBorrowingOpen && (

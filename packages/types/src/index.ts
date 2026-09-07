@@ -214,14 +214,18 @@ export interface Debt {
   type: DebtType;
   originalAmount: number;
   outstandingAmount: number;
-  interestRate: number; // Annual % (e.g., 8.5)
-  monthlyEmi: number;
+  interestRate: number; // Annual % (e.g., 8.5 or 42 for credit cards)
+  monthlyEmi: number; // For loans: monthly EMI; For credit cards: Minimum Due (MAD)
+  totalDueAmount?: number; // Full Statement Balance / Total Amount Due (TAD)
+  minimumDueAmount?: number; // Minimum Amount Due (MAD)
+  creditLimit?: number; // Total Card Limit (for CUR utilization calculation)
+  statementDate?: number; // Day of month bill is generated (1-31)
   totalTenureMonths?: number; // Total number of EMIs (e.g. 24, 36, 3)
   emisPaid?: number; // Number of EMIs paid
   emisRemaining?: number; // Number of remaining EMIs
   startDate: string;
   endDate?: string;
-  dueDay: number; // 1-31
+  dueDay: number; // 1-31 (Payment Due Date)
   notes?: string;
   createdAt: string;
   updatedAt: string;

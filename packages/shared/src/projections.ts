@@ -160,6 +160,49 @@ export function calculateEmiDetails(debt: Debt, currentDate: Date = new Date()):
   };
 }
 
+export interface CreditCardDetailsResult {
+  totalDueAmount: number; // Full statement balance / Total Amount Due (TAD)
+  minimumDueAmount: number; // Minimum Amount Due (MAD)
+  revolvingBalance: number; // Balance left if paying only MAD (totalDueAmount - minimumDueAmount)
+  creditLimit: number; // Total card limit
+  creditUtilizationRatio: number; // CUR percentage (e.g. 68%)
+  aprInterestRate: number; // Annual finance charge % (e.g. 42% p.a. / 3.5% monthly)
+  estimatedMonthlyFinanceCharge: number; // Estimated monthly finance charge + 18% GST on interest
+  isPaidInFull: boolean;
+}
+
+/**
+ * Calculates complete credit card statement dynamics: Total Due (TAD), Minimum Due (MAD),
+ * revolving finance charges, and credit limit utilization.
+ */
+export function calculateCreditCardDetails(debt: Debt): CreditCardDetailsResult {
+  const totalDueAmount = debt.totalDueAmount !== undefined ? debt.totalDueAmount : (debt.outstandingAmount || debt.originalAmount || 0);
+  const minimumDueAmount = debt.minimumDueAmount !== undefined
+    ? debt.minimumDueAmount
+    : (debt.monthlyEmi > 0 ? debt.monthlyEmi : Math.max(500, Math.round(totalDueAmount * 0.05)));
+  
+  const revolvingBalance = Math.max(0, totalDueAmount - minimumDueAmount);
+  const creditLimit = debt.creditLimit || Math.max(totalDueAmount * 1.5, 50000);
+  const creditUtilizationRatio = creditLimit > 0 ? Math.min(100, Math.round((totalDueAmount / creditLimit) * 100)) : 0;
+
+  // Indian Bank Standard Credit Card APR: ~42% p.a. (3.5%/month) + 18% GST on interest charges
+  const aprInterestRate = debt.interestRate > 0 ? debt.interestRate : 42;
+  const monthlyRate = aprInterestRate / 12 / 100;
+  const rawInterest = revolvingBalance * monthlyRate;
+  const estimatedMonthlyFinanceCharge = Math.round(rawInterest * 1.18); // Include 18% GST on bank charges
+
+  return {
+    totalDueAmount,
+    minimumDueAmount,
+    revolvingBalance,
+    creditLimit,
+    creditUtilizationRatio,
+    aprInterestRate,
+    estimatedMonthlyFinanceCharge,
+    isPaidInFull: totalDueAmount === 0,
+  };
+}
+
 export interface DebtSummaryResult {
   totalOriginal: number;
   totalOutstanding: number;
