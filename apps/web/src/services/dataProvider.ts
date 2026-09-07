@@ -148,6 +148,32 @@ export class DataProvider {
     return storageService.settleBorrowing(id, amount, accountId, date);
   }
 
+  async rolloverBorrowing(id: string, targetMonth: string) {
+    return storageService.rolloverBorrowing(id, targetMonth);
+  }
+
+  // --- INCOME STREAMS (JOB SALARY + FREELANCE / CONSULTING) ---
+  async getIncomeStreams() {
+    return storageService.getIncomeStreams();
+  }
+
+  async createIncomeStream(data: any) {
+    return storageService.createIncomeStream(data);
+  }
+
+  async updateIncomeStream(id: string, updates: any) {
+    return storageService.updateIncomeStream(id, updates);
+  }
+
+  async deleteIncomeStream(id: string) {
+    storageService.deleteIncomeStream(id);
+  }
+
+  // --- CIBIL SCORE ANALYSIS & RECOVERY ---
+  async getCibilAnalysis() {
+    return storageService.getCibilAnalysis();
+  }
+
   // --- DASHBOARD & REPORTS ---
   async getDashboardData(month?: string) {
     return storageService.getDashboardData(month);

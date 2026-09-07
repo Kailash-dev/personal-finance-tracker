@@ -6,4 +6,6 @@ export * from './projections';
 export * from './healthScore';
 export * from './reconciliation';
 export * from './mentor';
+export * from './cibilTracker';
+export * from './incomeStreams';
 

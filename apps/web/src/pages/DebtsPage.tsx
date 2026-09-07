@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
 import { dataProvider } from '../services/dataProvider';
-import { Debt, DebtType, Borrowing, BorrowingType } from '@personal-finance/types';
-import { formatINR, calculateDebtSummary } from '@personal-finance/shared';
+import { Debt, DebtType, Borrowing, BorrowingType, IncomeStream, IncomeStreamType, CibilProfile } from '@personal-finance/types';
+import { formatINR, calculateDebtSummary, calculateIncomeSummary } from '@personal-finance/shared';
 import {
   CreditCard,
   Percent,
@@ -29,16 +29,23 @@ import {
   Landmark,
   ArrowDownLeft,
   ArrowUpRight,
-  UserCheck,
   Sparkles,
   Home,
   ShoppingCart,
   Milk,
   Zap,
-  Flame,
   Fuel,
   Heart,
-  Tv,
+  Briefcase,
+  Laptop,
+  Target,
+  RefreshCw,
+  FileCheck,
+  ShieldAlert,
+  ArrowRight,
+  Activity,
+  Layers,
+  Award,
 } from 'lucide-react';
 
 import { SeptemberTrackerWidget } from '../components/dashboard/SeptemberTrackerWidget';
@@ -155,8 +162,12 @@ export const DebtsPage: React.FC = () => {
   const { user, selectedMonth, refreshTrigger, triggerRefresh } = useFinance();
   const { user: authUser } = useAuth();
 
-  // Active section tab: 'OUTGOINGS' (Rent, Groceries, Milk, Bills, VC, EMIs) or 'HAND_BORROWINGS' (Current month short-term borrowings)
-  const [activeTab, setActiveTab] = useState<'OUTGOINGS' | 'HAND_BORROWINGS'>('OUTGOINGS');
+  // 4 Core Tabs:
+  // 1. OUTGOINGS (Rent, Groceries, Milk, Bills, VC, EMIs)
+  // 2. HAND_BORROWINGS (Current month short-term borrowings & 1-click carry-forward/rollover)
+  // 3. CIBIL_SCORE (CIBIL score improvement, Credit Utilization <30%, Axis NOC tracker, Auto-debit safety)
+  // 4. INCOME_STREAMS (Job Salary + Freelance Gigs + Side Income gap calculator)
+  const [activeTab, setActiveTab] = useState<'OUTGOINGS' | 'HAND_BORROWINGS' | 'CIBIL_SCORE' | 'INCOME_STREAMS'>('OUTGOINGS');
 
   // Debts / Outgoings State
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -192,14 +203,30 @@ export const DebtsPage: React.FC = () => {
   const [purpose, setPurpose] = useState('');
   const [recordCashFlow, setRecordCashFlow] = useState(false);
 
+  // Income Streams State
+  const [incomeStreams, setIncomeStreams] = useState<IncomeStream[]>([]);
+  const [isAddIncomeStreamOpen, setIsAddIncomeStreamOpen] = useState(false);
+  const [streamName, setStreamName] = useState('');
+  const [streamType, setStreamType] = useState<IncomeStreamType>('FREELANCE');
+  const [streamAmount, setStreamAmount] = useState('');
+  const [streamDay, setStreamDay] = useState('15');
+  const [streamClient, setStreamClient] = useState('');
+
+  // CIBIL Profile State
+  const [cibilProfile, setCibilProfile] = useState<CibilProfile | null>(null);
+
   useEffect(() => {
     const loadAll = async () => {
-      const [d, b] = await Promise.all([
+      const [d, b, streams, cibil] = await Promise.all([
         dataProvider.getDebts(),
         dataProvider.getBorrowings(selectedMonth),
+        dataProvider.getIncomeStreams(),
+        dataProvider.getCibilAnalysis(),
       ]);
       setDebts(d);
       setBorrowings(b);
+      setIncomeStreams(streams);
+      setCibilProfile(cibil);
     };
     loadAll();
   }, [refreshTrigger, selectedMonth]);
@@ -350,10 +377,58 @@ export const DebtsPage: React.FC = () => {
     }
   };
 
+  // 1-Click Rollover / Carry Forward Borrowing
+  const handleRolloverBorrowing = async (b: Borrowing, targetMonth: string) => {
+    try {
+      await dataProvider.rolloverBorrowing(b.id, targetMonth);
+      triggerRefresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Income Stream Handlers
+  const handleAddIncomeStream = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const num = parseFloat(streamAmount);
+    if (!streamName || !num || num <= 0) return;
+
+    try {
+      await dataProvider.createIncomeStream({
+        userId: authUser?.id || user?.id || 'user_1',
+        name: streamName,
+        type: streamType,
+        expectedAmount: num,
+        expectedDay: parseInt(streamDay, 10) || 10,
+        isGuaranteed: streamType === 'SALARY_JOB',
+        clientOrEmployer: streamClient || 'Direct Client',
+        status: 'EXPECTED',
+      });
+
+      setIsAddIncomeStreamOpen(false);
+      setStreamName('');
+      setStreamAmount('');
+      setStreamClient('');
+      triggerRefresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteIncomeStream = async (id: string) => {
+    if (window.confirm('Are you sure you want to remove this income stream?')) {
+      await dataProvider.deleteIncomeStream(id);
+      triggerRefresh();
+    }
+  };
+
   // Calculations
-  const income = user?.monthlyIncome || authUser?.monthlyIncome || 0;
-  const summary = calculateDebtSummary(debts, income);
-  const freeCashflow = Math.max(0, income - summary.totalMonthlyEmi);
+  const baseSalary = user?.monthlyIncome || authUser?.monthlyIncome || 50000;
+  const incomeSummary = calculateIncomeSummary(incomeStreams, baseSalary);
+  const totalEarning = incomeSummary.totalInflow;
+
+  const summary = calculateDebtSummary(debts, totalEarning);
+  const freeCashflow = Math.max(0, totalEarning - summary.totalMonthlyEmi);
 
   // Borrowing Metrics
   const borrowedList = borrowings.filter((b) => b.type === 'BORROWED');
@@ -373,15 +448,15 @@ export const DebtsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-            Monthly Outgoings & Expenses Manager
+            Comprehensive Debt, CIBIL & Multi-Income Command Center
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Track House Rent, Groceries, Milk, Bills, Maid, Fuel, VC 1, VC 2, Bike EMIs, Card Minimum Dues & Hand Loans
+            Pro Financial Control: Rent, Groceries, EMIs, Carry-Forward Hand Loans, CIBIL Score 750+ Repair & Freelance Income
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {activeTab === 'OUTGOINGS' ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {activeTab === 'OUTGOINGS' && (
             <button
               onClick={() => {
                 setType('RENT_HOUSING');
@@ -394,7 +469,9 @@ export const DebtsPage: React.FC = () => {
               <Plus className="w-4 h-4" />
               <span>+ Add Monthly Outgoing</span>
             </button>
-          ) : (
+          )}
+
+          {activeTab === 'HAND_BORROWINGS' && (
             <button
               onClick={() => {
                 setBorrowingType('BORROWED');
@@ -408,38 +485,80 @@ export const DebtsPage: React.FC = () => {
               <span>+ Record Hand Loan / Borrowing</span>
             </button>
           )}
+
+          {activeTab === 'INCOME_STREAMS' && (
+            <button
+              onClick={() => {
+                setStreamType('FREELANCE');
+                setStreamName('');
+                setStreamAmount('15000');
+                setStreamDay('15');
+                setIsAddIncomeStreamOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition-all self-start"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Add Freelance / Side Income</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Kailash's September Cash Flow & Debt Tracker */}
+      {/* Kailash's September Cash Flow & Debt Tracker Widget */}
       <SeptemberTrackerWidget />
 
-      {/* Main Feature Tabs */}
-      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 max-w-xl">
+      {/* 4 Main Feature Tabs */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80">
         <button
           type="button"
           onClick={() => setActiveTab('OUTGOINGS')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'OUTGOINGS'
               ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <Home className="w-4 h-4" />
-          <span>Rent, Groceries, EMIs & Outgoings ({debts.length})</span>
+          <span>Outgoings & EMIs ({debts.length})</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('HAND_BORROWINGS')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'HAND_BORROWINGS'
               ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
           <HandCoins className="w-4 h-4" />
-          <span>Current Month Borrowings (उधार) ({borrowings.filter((b) => b.status !== 'SETTLED').length})</span>
+          <span>Borrowings & Rollover ({borrowings.filter((b) => b.status !== 'SETTLED').length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('CIBIL_SCORE')}
+          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            activeTab === 'CIBIL_SCORE'
+              ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>CIBIL Score Improvement & Repair</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('INCOME_STREAMS')}
+          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            activeTab === 'INCOME_STREAMS'
+              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          <Laptop className="w-4 h-4" />
+          <span>Income Hub (Job + Freelance)</span>
         </button>
       </div>
 
@@ -639,18 +758,6 @@ export const DebtsPage: React.FC = () => {
                   <Sparkles className="w-4 h-4" />
                   <span>Load Kailash's Complete September FinPlan</span>
                 </button>
-                <button
-                  onClick={() => openPresetModal('RENT_HOUSING', 'House Rent', 'Landlord')}
-                  className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-500/25 transition-all"
-                >
-                  + Add House Rent
-                </button>
-                <button
-                  onClick={() => openPresetModal('GROCERIES_FOOD', 'Monthly Groceries', 'DMart')}
-                  className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-md shadow-amber-500/25 transition-all"
-                >
-                  + Add Groceries
-                </button>
               </div>
             </div>
           ) : (
@@ -746,7 +853,7 @@ export const DebtsPage: React.FC = () => {
       )}
 
       {/* =========================================================
-          TAB 2: CURRENT MONTH SHORT-TERM BORROWINGS & HAND LOANS (उधार)
+          TAB 2: CURRENT MONTH SHORT-TERM BORROWINGS & CARRY-FORWARD (उधार & Rollover)
          ========================================================= */}
       {activeTab === 'HAND_BORROWINGS' && (
         <div className="space-y-6 animate-in fade-in-50 duration-150">
@@ -795,6 +902,20 @@ export const DebtsPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Carry-Forward / Rollover Info Banner */}
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3 text-xs">
+            <RefreshCw className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-bold text-amber-900 dark:text-amber-200">
+                Multi-Month Carry-Forward & Rollover Engine
+              </h4>
+              <p className="text-slate-600 dark:text-slate-400 mt-0.5">
+                Have a hand loan you took during relocation (e.g. ₹10,000 borrowed 4th Sept) that is deferred to next month?
+                Use the <strong>"Carry Forward to Oct 2026"</strong> button on any active borrowing to move the cash obligation to the next month's budget without losing history!
+              </p>
+            </div>
+          </div>
+
           {/* Borrowings List */}
           {borrowings.length === 0 ? (
             <div className="glass-card p-12 text-center space-y-4">
@@ -803,7 +924,7 @@ export const DebtsPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  No Current Month Short-Term Borrowings (उधार)
+                  No Short-Term Borrowings (उधार) Added
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
                   Keep track of quick hand loans borrowed from friends, colleagues, or relatives, as well as money you lent to others.
@@ -819,28 +940,6 @@ export const DebtsPage: React.FC = () => {
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Load Kailash's Hand Loans & Borrowings</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setBorrowingType('BORROWED');
-                    setPersonName('');
-                    setBAmount('');
-                    setIsAddBorrowingOpen(true);
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-md shadow-rose-500/25 transition-all"
-                >
-                  + I Borrowed Money
-                </button>
-                <button
-                  onClick={() => {
-                    setBorrowingType('LENT');
-                    setPersonName('');
-                    setBAmount('');
-                    setIsAddBorrowingOpen(true);
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-md shadow-emerald-500/25 transition-all"
-                >
-                  + I Lent Money
                 </button>
               </div>
             </div>
@@ -893,6 +992,12 @@ export const DebtsPage: React.FC = () => {
                           {b.purpose && (
                             <p className="text-[11px] text-slate-400 mt-0.5">Purpose: {b.purpose}</p>
                           )}
+                          {b.carryForwardMonth && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-md border border-amber-500/20">
+                              <RefreshCw className="w-3 h-3" />
+                              Carried Forward to {b.carryForwardMonth} (Rollover #{b.rolloverCount || 1})
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -934,27 +1039,38 @@ export const DebtsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                    {/* Footer Actions */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
                       <span className="text-[11px] text-slate-400 flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5" />
                         <span>Borrowed: {b.borrowDate}</span>
                         {b.dueDate && <span className="font-semibold text-amber-600 ml-1">• Due: {b.dueDate}</span>}
                       </span>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         {!isSettled && (
-                          <button
-                            onClick={() => handleOpenSettleBorrowing(b)}
-                            className={`px-2.5 py-1 rounded-lg text-white font-bold text-[11px] shadow-sm transition-colors flex items-center gap-1 ${
-                              isBorrowed
-                                ? 'bg-rose-600 hover:bg-rose-700'
-                                : 'bg-emerald-600 hover:bg-emerald-700'
-                            }`}
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>{isBorrowed ? 'Repay' : 'Collect'}</span>
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleRolloverBorrowing(b, '2026-10')}
+                              className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 text-amber-800 dark:text-amber-200 font-bold text-[11px] border border-amber-500/20 transition-colors flex items-center gap-1"
+                              title="Rollover this borrowing to October 2026"
+                            >
+                              <RefreshCw className="w-3 h-3 text-amber-600" />
+                              <span>Carry to Oct</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleOpenSettleBorrowing(b)}
+                              className={`px-2.5 py-1 rounded-lg text-white font-bold text-[11px] shadow-sm transition-colors flex items-center gap-1 ${
+                                isBorrowed
+                                  ? 'bg-rose-600 hover:bg-rose-700'
+                                  : 'bg-emerald-600 hover:bg-emerald-700'
+                              }`}
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>{isBorrowed ? 'Repay' : 'Collect'}</span>
+                            </button>
+                          </>
                         )}
 
                         <button
@@ -971,6 +1087,296 @@ export const DebtsPage: React.FC = () => {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* =========================================================
+          TAB 3: CIBIL SCORE IMPROVEMENT & REPAIR CENTER
+         ========================================================= */}
+      {activeTab === 'CIBIL_SCORE' && (
+        <div className="space-y-6 animate-in fade-in-50 duration-150">
+          {/* CIBIL Score Header & Speedometer Gauge */}
+          <div className="glass-card p-6 border-purple-500/25 bg-gradient-to-br from-white via-purple-50/20 to-white dark:from-slate-900 dark:via-purple-950/20 dark:to-slate-900">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+              {/* Score Meter */}
+              <div className="text-center lg:text-left space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 flex items-center justify-center lg:justify-start gap-1.5">
+                  <ShieldCheck className="w-4 h-4" />
+                  Estimated Bureau Health Score
+                </span>
+                <div className="flex items-baseline justify-center lg:justify-start gap-2">
+                  <span className="text-5xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+                    {cibilProfile?.estimatedScore || 685}
+                  </span>
+                  <span className="text-sm font-bold text-slate-400">/ 900</span>
+                  <span className="text-xs font-extrabold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 border border-amber-500/20">
+                    {cibilProfile?.cibilStatus || 'FAIR'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Target: <strong className="text-emerald-600">750+ (Prime Credit Bracket)</strong> • Gap:{' '}
+                  <strong className="text-purple-600">+{Math.max(0, 750 - (cibilProfile?.estimatedScore || 685))} pts required</strong>
+                </p>
+              </div>
+
+              {/* Credit Card Utilization Ratio (CUR) */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-slate-700 dark:text-slate-300">Credit Card Utilization (CUR)</span>
+                  <span className="text-rose-600 dark:text-rose-400">{cibilProfile?.creditUtilizationRatio || 76}% (High)</span>
+                </div>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 rounded-full"
+                    style={{ width: `${Math.min(100, cibilProfile?.creditUtilizationRatio || 76)}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                  <span>Utilized: {formatINR(cibilProfile?.totalCreditUtilized || 38000)}</span>
+                  <span>Limit: {formatINR(cibilProfile?.totalCreditLimit || 50000)}</span>
+                </div>
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                  💡 Golden Rule: Keep CUR &lt;30% (below ₹15,000) for rapid +40 score boost!
+                </p>
+              </div>
+
+              {/* Key Milestones */}
+              <div className="space-y-2">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">On-Time Repayment Streak</span>
+                  <span className="font-extrabold text-emerald-600">4 Months Clean ✓</span>
+                </div>
+                <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Settled Loan Closures</span>
+                  <span className="font-extrabold text-indigo-600">1 (Axis Bank CC)</span>
+                </div>
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">NACH Bounce Risk Radar</span>
+                  <span className="font-extrabold text-emerald-600">0% Risk (9th-10th Covered)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actionable Recommendations */}
+          <div className="glass-card p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-2">
+                <Target className="w-4 h-4 text-purple-600" />
+                <span>Expert CIBIL Repair & Improvement Playbook</span>
+              </h3>
+              <span className="text-[11px] text-purple-600 font-semibold">Live Personalized Rules</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {cibilProfile?.recommendations.map((rec, i) => (
+                <div
+                  key={i}
+                  className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-xs text-slate-700 dark:text-slate-300 leading-relaxed flex items-start gap-3"
+                >
+                  <div className="w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-600 flex items-center justify-center font-black text-xs shrink-0 mt-0.5">
+                    {i + 1}
+                  </div>
+                  <div>{rec}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Axis Settlement & NOC Tracker */}
+          <div className="glass-card p-6 space-y-4 border-indigo-500/20 bg-gradient-to-br from-white via-indigo-50/15 to-white dark:from-slate-900 dark:via-indigo-950/15 dark:to-slate-900">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <FileCheck className="w-5 h-5 text-indigo-600" />
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                    Axis Bank Credit Card Settlement & NDC Status
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Total Settlement: ₹4,200 (3 installments of ₹1,400)</p>
+                </div>
+              </div>
+              <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20">
+                Final Step in Sept 2026
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20">
+                <span className="text-[10px] font-bold text-emerald-600 uppercase">Installment 1 of 3</span>
+                <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mt-1">₹1,400</p>
+                <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Paid & Cleared
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20">
+                <span className="text-[10px] font-bold text-emerald-600 uppercase">Installment 2 of 3</span>
+                <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mt-1">₹1,400</p>
+                <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Paid & Cleared
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-500/20">
+                <span className="text-[10px] font-bold text-amber-600 uppercase">Installment 3 of 3 (Final)</span>
+                <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mt-1">₹1,400</p>
+                <span className="text-[11px] text-amber-600 font-bold flex items-center gap-1 mt-1">
+                  <Clock className="w-3.5 h-3.5" /> Due in September
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 space-y-1.5">
+              <span className="font-bold text-slate-900 dark:text-slate-100">📌 Post-Payment Action Required:</span>
+              <p>
+                Once the 3rd installment of ₹1,400 is paid this month, email Axis Bank Collections asking for the official <strong>No Dues Certificate (NDC)</strong> and verify after 45 days that the status on CIBIL is updated to <strong>"Closed"</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          TAB 4: MULTI-STREAM INCOME HUB (JOB + FREELANCE + SIDE GIGS)
+         ========================================================= */}
+      {activeTab === 'INCOME_STREAMS' && (
+        <div className="space-y-6 animate-in fade-in-50 duration-150">
+          {/* Income Summary Metric Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="glass-card p-5 border-indigo-500/20">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                  Primary Job Salary
+                </span>
+                <Briefcase className="w-4 h-4 text-indigo-500" />
+              </div>
+              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
+                {formatINR(incomeSummary.primarySalary)}
+              </p>
+              <span className="text-xs text-slate-500">Credited on 10th of every month</span>
+            </div>
+
+            <div className="glass-card p-5 border-purple-500/20">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                  Freelance & Side Gigs
+                </span>
+                <Laptop className="w-4 h-4 text-purple-500" />
+              </div>
+              <p className="text-2xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">
+                {formatINR(incomeSummary.totalFreelanceExpected)}
+              </p>
+              <span className="text-xs text-slate-500">
+                {incomeSummary.totalFreelanceExpected > 0
+                  ? `Accounts for ${incomeSummary.freelanceSharePercent.toFixed(0)}% of total income`
+                  : 'Add freelance gigs to accelerate debt payoff'}
+              </span>
+            </div>
+
+            <div className="glass-card p-5 border-emerald-500/20 bg-gradient-to-br from-white via-emerald-50/15 to-white dark:from-slate-900 dark:via-emerald-950/15 dark:to-slate-900">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                  Total Monthly Inflow
+                </span>
+                <TrendingUp className="w-4 h-4 text-emerald-500" />
+              </div>
+              <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
+                {formatINR(totalEarning)}
+              </p>
+              <span className="text-xs text-slate-500">Combined earning power</span>
+            </div>
+          </div>
+
+          {/* Side-Income Acceleration Calculator */}
+          <div className="glass-card p-6 space-y-3 bg-gradient-to-r from-indigo-900/10 via-brand-900/10 to-purple-900/10 border-indigo-500/20">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-brand-500" />
+              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                Pro Manager Strategy: The Freelance Debt Acceleration Bridge
+              </h3>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              With your primary job salary of <strong>₹50,000</strong>, your committed outgoings and debt obligations create a tight margin of <strong>-₹17,000</strong> in high-repayment months.
+              Adding a side freelance / consulting target of <strong>₹15,000 - ₹20,000</strong> immediately bridges all deficit, protects you from borrowing, and clears your credit card balances <strong>8 months faster</strong>!
+            </p>
+          </div>
+
+          {/* Income Streams List */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                Active Income Streams ({incomeStreams.length})
+              </h3>
+              <button
+                onClick={() => {
+                  setStreamType('FREELANCE');
+                  setStreamName('');
+                  setStreamAmount('15000');
+                  setStreamDay('15');
+                  setIsAddIncomeStreamOpen(true);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Add Stream</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {incomeStreams.map((stream) => (
+                <div
+                  key={stream.id}
+                  className="glass-card p-5 space-y-3 border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-shadow flex flex-col justify-between"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center shrink-0">
+                        {stream.type === 'SALARY_JOB' ? <Briefcase className="w-5 h-5" /> : <Laptop className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{stream.name}</h4>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              stream.type === 'SALARY_JOB'
+                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
+                                : 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300'
+                            }`}
+                          >
+                            {stream.type === 'SALARY_JOB' ? 'PRIMARY JOB' : 'FREELANCE / GIG'}
+                          </span>
+                        </div>
+                        {stream.clientOrEmployer && (
+                          <p className="text-[11px] text-slate-400 mt-0.5">Source: {stream.clientOrEmployer}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+                      {formatINR(stream.expectedAmount)}/mo
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
+                    <span className="flex items-center gap-1 text-[11px]">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+                      Expected on {stream.expectedDay}th
+                    </span>
+
+                    {stream.type !== 'SALARY_JOB' && (
+                      <button
+                        onClick={() => handleDeleteIncomeStream(stream.id)}
+                        className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/60 text-slate-400 hover:text-rose-600 transition-colors"
+                        title="Delete stream"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1267,7 +1673,7 @@ export const DebtsPage: React.FC = () => {
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Purpose / Notes</label>
                 <input
                   type="text"
-                  placeholder="e.g. Rent emergency / Movie ticket advance / Cash shortage"
+                  placeholder="e.g. Relocation borrowing / Rent emergency / Cash shortage"
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
@@ -1348,6 +1754,107 @@ export const DebtsPage: React.FC = () => {
                 <Check className="w-4 h-4" />
                 <span>Confirm Settlement</span>
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 5: Add Income Stream (Freelance / Side Gig / Consulting) */}
+      {isAddIncomeStreamOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsAddIncomeStreamOpen(false)} />
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 z-10 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
+                  Add Income Stream / Side Gig
+                </h3>
+                <p className="text-[11px] text-slate-400">Freelance, Consulting, Side Projects, Business</p>
+              </div>
+              <button onClick={() => setIsAddIncomeStreamOpen(false)}>
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddIncomeStream} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Income Stream Type</label>
+                <select
+                  value={streamType}
+                  onChange={(e) => setStreamType(e.target.value as IncomeStreamType)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                >
+                  <option value="FREELANCE">💻 Freelance Software / Design / Content Gig</option>
+                  <option value="CONSULTING">📊 Consulting & Advisory Retainer</option>
+                  <option value="BUSINESS">🏢 Side Business / Trading</option>
+                  <option value="RENTAL">🏠 Rental Income</option>
+                  <option value="DIVIDEND">📈 Stock Dividends / Investments</option>
+                  <option value="OTHER">✨ Other Income</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Stream / Project Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. React Web App Gig / UI Consulting"
+                    value={streamName}
+                    onChange={(e) => setStreamName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Client / Source</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Upwork / US Client / Local Agency"
+                    value={streamClient}
+                    onChange={(e) => setStreamClient(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Expected Monthly Income (₹)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="e.g. 15000"
+                    value={streamAmount}
+                    onChange={(e) => setStreamAmount(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-extrabold text-sm text-indigo-600"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Expected Pay Day of Month
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={streamDay}
+                    onChange={(e) => setStreamDay(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 flex items-center justify-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Save Income Stream</span>
+                </button>
+              </div>
             </form>
           </div>
         </div>

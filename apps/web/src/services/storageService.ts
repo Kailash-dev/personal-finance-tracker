@@ -10,6 +10,8 @@ import {
   RecurringTransaction,
   BankImport,
   Borrowing,
+  IncomeStream,
+  CibilProfile,
 } from '@personal-finance/types';
 import {
   DEFAULT_CATEGORIES,
@@ -20,6 +22,8 @@ import {
   calculateGoalProjection,
   calculateDebtSummary,
   calculateMonthlyReconciliation,
+  calculateCibilAnalysis,
+  calculateIncomeSummary,
   formatINR,
 } from '@personal-finance/shared';
 
@@ -32,6 +36,7 @@ const STORAGE_KEYS = {
   GOALS: 'rupeetrack_goals',
   DEBTS: 'rupeetrack_debts',
   BORROWINGS: 'rupeetrack_borrowings',
+  INCOME_STREAMS: 'rupeetrack_income_streams',
   RECURRING: 'rupeetrack_recurring',
   RULES: 'rupeetrack_rules',
   IMPORTS: 'rupeetrack_imports',
@@ -415,11 +420,27 @@ class StorageService {
       },
     ];
 
+    const incomeStreams: IncomeStream[] = [
+      {
+        id: 'inc_freelance_1',
+        userId: 'user_kailash',
+        name: 'Freelance Tech & Consulting Work',
+        type: 'FREELANCE',
+        expectedAmount: 15000,
+        expectedDay: 20,
+        isGuaranteed: false,
+        clientOrEmployer: 'Direct Clients / Upwork',
+        status: 'EXPECTED',
+        notes: 'Target side-income to accelerate debt payoff and bridge September cash gap',
+      },
+    ];
+
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
     localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
     localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(DEFAULT_CATEGORIES));
     localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(debts));
     localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify(borrowings));
+    localStorage.setItem(STORAGE_KEYS.INCOME_STREAMS, JSON.stringify(incomeStreams));
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
     localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(budgets));
     localStorage.setItem(STORAGE_KEYS.RULES, JSON.stringify(DEFAULT_MERCHANT_RULES));
@@ -958,6 +979,65 @@ class StorageService {
     });
 
     return b;
+  }
+
+  rolloverBorrowing(id: string, targetMonth: string): Borrowing {
+    const list = this.getBorrowings();
+    const idx = list.findIndex((b) => b.id === id);
+    if (idx === -1) throw new Error('Borrowing record not found');
+
+    const b = list[idx];
+    b.carryForwardMonth = targetMonth;
+    b.rolloverCount = (b.rolloverCount || 0) + 1;
+    b.notes = `${b.notes || ''} [Carried forward to ${targetMonth}]`.trim();
+    b.updatedAt = new Date().toISOString();
+
+    localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify(list));
+    return b;
+  }
+
+  // --- INCOME STREAMS (JOB SALARY + FREELANCE / CONSULTING) ---
+  getIncomeStreams(): IncomeStream[] {
+    const raw = localStorage.getItem(STORAGE_KEYS.INCOME_STREAMS);
+    let streams: IncomeStream[] = raw ? JSON.parse(raw) : [];
+    if (!streams || streams.length === 0) {
+      this.seedKailashFinanceData();
+      streams = JSON.parse(localStorage.getItem(STORAGE_KEYS.INCOME_STREAMS) || '[]');
+    }
+    return streams;
+  }
+
+  createIncomeStream(stream: Omit<IncomeStream, 'id'>): IncomeStream {
+    const streams = this.getIncomeStreams();
+    const newStream: IncomeStream = {
+      ...stream,
+      id: `inc_${Date.now()}`,
+    };
+    streams.push(newStream);
+    localStorage.setItem(STORAGE_KEYS.INCOME_STREAMS, JSON.stringify(streams));
+    return newStream;
+  }
+
+  updateIncomeStream(id: string, updates: Partial<IncomeStream>): IncomeStream {
+    const streams = this.getIncomeStreams();
+    const idx = streams.findIndex((s) => s.id === id);
+    if (idx === -1) throw new Error('Income stream not found');
+    streams[idx] = { ...streams[idx], ...updates };
+    localStorage.setItem(STORAGE_KEYS.INCOME_STREAMS, JSON.stringify(streams));
+    return streams[idx];
+  }
+
+  deleteIncomeStream(id: string): void {
+    let streams = this.getIncomeStreams();
+    streams = streams.filter((s) => s.id !== id);
+    localStorage.setItem(STORAGE_KEYS.INCOME_STREAMS, JSON.stringify(streams));
+  }
+
+  // --- CIBIL SCORE ANALYSIS & RECOVERY ---
+  getCibilAnalysis(): CibilProfile {
+    const debts = this.getDebts();
+    const accounts = this.getAccounts();
+    return calculateCibilAnalysis(debts, accounts);
   }
 
   // --- DASHBOARD DATA AGGREGATOR ---

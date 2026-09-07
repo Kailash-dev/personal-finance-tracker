@@ -234,11 +234,41 @@ export interface Borrowing {
   amountSettled: number;
   borrowDate: string; // YYYY-MM-DD
   dueDate?: string; // YYYY-MM-DD
+  carryForwardMonth?: string; // YYYY-MM (e.g., 2026-10)
+  rolloverCount?: number;
   status: BorrowingStatus;
   purpose?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type IncomeStreamType = 'SALARY_JOB' | 'FREELANCE' | 'CONSULTING' | 'BUSINESS' | 'RENTAL' | 'DIVIDEND' | 'OTHER';
+
+export interface IncomeStream {
+  id: string;
+  userId: string;
+  name: string;
+  type: IncomeStreamType;
+  expectedAmount: number;
+  expectedDay: number; // Day of month (1-31)
+  isGuaranteed: boolean;
+  clientOrEmployer: string;
+  status: 'EXPECTED' | 'RECEIVED' | 'DELAYED';
+  notes?: string;
+}
+
+export interface CibilProfile {
+  estimatedScore: number;
+  targetScore: number;
+  creditUtilizationRatio: number; // % (e.g. 76%)
+  totalCreditLimit: number;
+  totalCreditUtilized: number;
+  onTimePaymentStreakMonths: number;
+  settledAccountsCount: number;
+  highInterestDebtTotal: number;
+  cibilStatus: 'POOR' | 'FAIR' | 'GOOD' | 'EXCELLENT';
+  recommendations: string[];
 }
 
 
