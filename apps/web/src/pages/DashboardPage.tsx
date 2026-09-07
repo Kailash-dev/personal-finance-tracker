@@ -7,6 +7,7 @@ import { CategoryDonutChart } from '../components/dashboard/CategoryDonutChart';
 import { GoalProgressWidget } from '../components/dashboard/GoalProgressWidget';
 import { HealthScoreWidget } from '../components/dashboard/HealthScoreWidget';
 import { CreditCardWidget } from '../components/dashboard/CreditCardWidget';
+import { QuickExpenseLoggerBar } from '../components/dashboard/QuickExpenseLoggerBar';
 import { formatINR } from '@personal-finance/shared';
 import {
   TrendingUp,
@@ -24,7 +25,7 @@ import {
 import { Link } from 'react-router-dom';
 
 export const DashboardPage: React.FC = () => {
-  const { selectedMonth, refreshTrigger, setIsQuickModalOpen } = useFinance();
+  const { selectedMonth, refreshTrigger, setIsQuickModalOpen, openQuickModalWithPreset } = useFinance();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -84,7 +85,7 @@ export const DashboardPage: React.FC = () => {
             <span>Import Statement</span>
           </Link>
           <button
-            onClick={() => setIsQuickModalOpen(true)}
+            onClick={() => openQuickModalWithPreset()}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-md shadow-brand-500/25 transition-all"
           >
             <Plus className="w-4 h-4" />
@@ -92,6 +93,9 @@ export const DashboardPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Quick Expense Logger Strip */}
+      <QuickExpenseLoggerBar />
 
       {/* Finance Mentor Banner */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-brand-500/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

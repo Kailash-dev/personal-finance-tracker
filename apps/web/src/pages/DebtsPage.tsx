@@ -31,16 +31,66 @@ import {
   ArrowUpRight,
   UserCheck,
   Sparkles,
+  Home,
+  ShoppingCart,
+  Milk,
+  Zap,
+  Flame,
+  Fuel,
+  Heart,
+  Tv,
 } from 'lucide-react';
 
 const DEBT_TYPE_CONFIG: Record<
   DebtType,
   { label: string; icon: any; color: string; badgeBg: string }
 > = {
+  RENT_HOUSING: {
+    label: 'Rent & Maintenance',
+    icon: Home,
+    color: 'text-indigo-500',
+    badgeBg: 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-500/20',
+  },
+  GROCERIES_FOOD: {
+    label: 'Groceries & Staples',
+    icon: ShoppingCart,
+    color: 'text-amber-500',
+    badgeBg: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-500/20',
+  },
+  MILK_DAIRY: {
+    label: 'Daily Milk & Dairy',
+    icon: Milk,
+    color: 'text-sky-500',
+    badgeBg: 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-500/20',
+  },
+  UTILITIES_BILLS: {
+    label: 'Electricity & Bills',
+    icon: Zap,
+    color: 'text-yellow-500',
+    badgeBg: 'bg-yellow-50 dark:bg-yellow-950/50 text-yellow-700 dark:text-yellow-300 border-yellow-500/20',
+  },
+  MAID_COOK: {
+    label: 'Maid & Cook Salary',
+    icon: Users,
+    color: 'text-teal-500',
+    badgeBg: 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-500/20',
+  },
+  FUEL_TRANSPORT: {
+    label: 'Fuel & Petrol',
+    icon: Fuel,
+    color: 'text-pink-500',
+    badgeBg: 'bg-pink-50 dark:bg-pink-950/50 text-pink-700 dark:text-pink-300 border-pink-500/20',
+  },
+  FAMILY_PERSONAL: {
+    label: 'Family & Personal',
+    icon: Heart,
+    color: 'text-rose-500',
+    badgeBg: 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-500/20',
+  },
   CHIT_FUND_VC: {
     label: 'Chit Fund / VC',
     icon: Coins,
-    color: 'text-amber-500',
+    color: 'text-amber-600',
     badgeBg: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-500/20',
   },
   BIKE_LOAN: {
@@ -62,7 +112,7 @@ const DEBT_TYPE_CONFIG: Record<
     badgeBg: 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-500/20',
   },
   PERSONAL_BORROWING: {
-    label: 'Personal Borrowing / Hand Loan',
+    label: 'Personal Hand Loan',
     icon: HandCoins,
     color: 'text-emerald-500',
     badgeBg: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
@@ -70,7 +120,7 @@ const DEBT_TYPE_CONFIG: Record<
   HOME_LOAN: {
     label: 'Home Loan / Mortgage',
     icon: Building,
-    color: 'text-indigo-500',
+    color: 'text-indigo-600',
     badgeBg: 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-500/20',
   },
   PERSONAL_LOAN: {
@@ -82,7 +132,7 @@ const DEBT_TYPE_CONFIG: Record<
   EDUCATION_LOAN: {
     label: 'Education Loan',
     icon: Users,
-    color: 'text-teal-500',
+    color: 'text-teal-600',
     badgeBg: 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-500/20',
   },
   FRIENDS_FAMILY: {
@@ -103,20 +153,20 @@ export const DebtsPage: React.FC = () => {
   const { user, selectedMonth, refreshTrigger, triggerRefresh } = useFinance();
   const { user: authUser } = useAuth();
 
-  // Active section tab: 'OUTGOINGS' (VCs, EMIs, Loans) or 'HAND_BORROWINGS' (Current month short-term borrowings & lendings)
+  // Active section tab: 'OUTGOINGS' (Rent, Groceries, Milk, Bills, VC, EMIs) or 'HAND_BORROWINGS' (Current month short-term borrowings)
   const [activeTab, setActiveTab] = useState<'OUTGOINGS' | 'HAND_BORROWINGS'>('OUTGOINGS');
 
-  // Debts State
+  // Debts / Outgoings State
   const [debts, setDebts] = useState<Debt[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [selectedDebtToPay, setSelectedDebtToPay] = useState<Debt | null>(null);
   const [payAmount, setPayAmount] = useState('');
 
-  // Form states for Debt
+  // Form states for Outgoing/Debt
   const [name, setName] = useState('');
   const [lender, setLender] = useState('');
-  const [type, setType] = useState<DebtType>('CHIT_FUND_VC');
+  const [type, setType] = useState<DebtType>('RENT_HOUSING');
   const [originalAmount, setOriginalAmount] = useState('');
   const [outstandingAmount, setOutstandingAmount] = useState('');
   const [interestRate, setInterestRate] = useState('0');
@@ -152,14 +202,26 @@ export const DebtsPage: React.FC = () => {
     loadAll();
   }, [refreshTrigger, selectedMonth]);
 
-  const openPresetModal = (presetType: DebtType, defaultName: string, defaultLender: string) => {
+  const openPresetModal = (presetType: DebtType, defaultName: string, defaultLender: string, defaultAmount?: string) => {
     setType(presetType);
     setName(defaultName);
     setLender(defaultLender);
-    setOriginalAmount('');
-    setOutstandingAmount('');
-    setMonthlyEmi('');
-    setInterestRate(presetType === 'CHIT_FUND_VC' || presetType === 'PERSONAL_BORROWING' ? '0' : '9.5');
+    setOriginalAmount(defaultAmount ? (parseFloat(defaultAmount) * 12).toString() : '');
+    setOutstandingAmount(defaultAmount ? (parseFloat(defaultAmount) * 12).toString() : '');
+    setMonthlyEmi(defaultAmount || '');
+    setInterestRate(
+      presetType === 'CHIT_FUND_VC' ||
+      presetType === 'PERSONAL_BORROWING' ||
+      presetType === 'RENT_HOUSING' ||
+      presetType === 'GROCERIES_FOOD' ||
+      presetType === 'MILK_DAIRY' ||
+      presetType === 'UTILITIES_BILLS' ||
+      presetType === 'MAID_COOK' ||
+      presetType === 'FUEL_TRANSPORT' ||
+      presetType === 'FAMILY_PERSONAL'
+        ? '0'
+        : '9.5'
+    );
     setDueDay('5');
     setNotes('');
     setIsAddModalOpen(true);
@@ -170,7 +232,8 @@ export const DebtsPage: React.FC = () => {
     if (!name || !lender || !monthlyEmi) return;
 
     try {
-      const orig = parseFloat(originalAmount) || parseFloat(outstandingAmount) || parseFloat(monthlyEmi) * 12;
+      const emiNum = parseFloat(monthlyEmi);
+      const orig = parseFloat(originalAmount) || parseFloat(outstandingAmount) || emiNum * 12;
       const out = parseFloat(outstandingAmount) || orig;
 
       await dataProvider.createDebt({
@@ -181,7 +244,7 @@ export const DebtsPage: React.FC = () => {
         originalAmount: orig,
         outstandingAmount: out,
         interestRate: parseFloat(interestRate) || 0,
-        monthlyEmi: parseFloat(monthlyEmi) || 0,
+        monthlyEmi: emiNum,
         startDate: new Date().toISOString().split('T')[0],
         dueDay: parseInt(dueDay, 10) || 5,
         notes,
@@ -308,10 +371,10 @@ export const DebtsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-            Outgoings, Debts & Hand Loans
+            Monthly Outgoings & Expenses Manager
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Track Chit Funds (VC 1, VC 2), Bike EMIs, Card Minimum Dues, and Current Month Short-Term Borrowings (उधार)
+            Track House Rent, Groceries, Milk, Bills, Maid, Fuel, VC 1, VC 2, Bike EMIs, Card Minimum Dues & Hand Loans
           </p>
         </div>
 
@@ -319,7 +382,7 @@ export const DebtsPage: React.FC = () => {
           {activeTab === 'OUTGOINGS' ? (
             <button
               onClick={() => {
-                setType('CHIT_FUND_VC');
+                setType('RENT_HOUSING');
                 setName('');
                 setLender('');
                 setIsAddModalOpen(true);
@@ -327,7 +390,7 @@ export const DebtsPage: React.FC = () => {
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all self-start"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Outgoing / EMI</span>
+              <span>+ Add Monthly Outgoing</span>
             </button>
           ) : (
             <button
@@ -357,8 +420,8 @@ export const DebtsPage: React.FC = () => {
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
-          <CreditCard className="w-4 h-4" />
-          <span>Monthly Outgoings & EMIs ({debts.length})</span>
+          <Home className="w-4 h-4" />
+          <span>Rent, Groceries, EMIs & Outgoings ({debts.length})</span>
         </button>
 
         <button
@@ -376,7 +439,7 @@ export const DebtsPage: React.FC = () => {
       </div>
 
       {/* =========================================================
-          TAB 1: MONTHLY OUTGOINGS & FIXED EMIS (VC 1, VC 2, BIKE EMI, CARDS)
+          TAB 1: MONTHLY OUTGOINGS (RENT, GROCERY, MILK, BILLS, MAID, VC, EMIS)
          ========================================================= */}
       {activeTab === 'OUTGOINGS' && (
         <div className="space-y-6 animate-in fade-in-50 duration-150">
@@ -384,17 +447,73 @@ export const DebtsPage: React.FC = () => {
           <div className="glass-card p-4 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                ⚡ Quick Add Outgoing Category Presets:
+                ⚡ 1-Click Fast Presets (Rent, Groceries, Milk, Bills, Maid, VCs, Cards):
               </span>
-              <span className="text-[11px] text-slate-400">Click to pre-fill</span>
+              <span className="text-[11px] text-slate-400">Click to add immediately</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               <button
-                onClick={() => openPresetModal('CHIT_FUND_VC', 'VC 1 (Monthly Chit)', 'Chit Organizer / Committee')}
+                onClick={() => openPresetModal('RENT_HOUSING', 'House Rent / Society Maintenance', 'Landlord / Society')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-indigo-500/30 bg-indigo-50/60 dark:bg-indigo-950/30 hover:bg-indigo-100/60 text-xs font-semibold text-indigo-900 dark:text-indigo-200 transition-colors"
+              >
+                <Home className="w-4 h-4 text-indigo-500 shrink-0" />
+                <span className="truncate">+ Rent & Society</span>
+              </button>
+
+              <button
+                onClick={() => openPresetModal('GROCERIES_FOOD', 'DMart / Monthly Groceries', 'DMart / Supermarket')}
                 className="flex items-center gap-2 p-2.5 rounded-xl border border-amber-500/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
               >
-                <Coins className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="truncate">+ VC / Chit Fund</span>
+                <ShoppingCart className="w-4 h-4 text-amber-500 shrink-0" />
+                <span className="truncate">+ Groceries</span>
+              </button>
+
+              <button
+                onClick={() => openPresetModal('MILK_DAIRY', 'Daily Milk & Dairy', 'Amul / Country Delight / Milkman')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-sky-500/30 bg-sky-50/60 dark:bg-sky-950/30 hover:bg-sky-100/60 text-xs font-semibold text-sky-900 dark:text-sky-200 transition-colors"
+              >
+                <Milk className="w-4 h-4 text-sky-500 shrink-0" />
+                <span className="truncate">+ Daily Milk</span>
+              </button>
+
+              <button
+                onClick={() => openPresetModal('UTILITIES_BILLS', 'Electricity & Gas Bills', 'Electricity Board / IGL')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-yellow-500/30 bg-yellow-50/60 dark:bg-yellow-950/30 hover:bg-yellow-100/60 text-xs font-semibold text-yellow-900 dark:text-yellow-200 transition-colors"
+              >
+                <Zap className="w-4 h-4 text-yellow-500 shrink-0" />
+                <span className="truncate">+ Bills & Gas</span>
+              </button>
+
+              <button
+                onClick={() => openPresetModal('MAID_COOK', 'House Maid & Cook Salary', 'Maid / Cook')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-teal-500/30 bg-teal-50/60 dark:bg-teal-950/30 hover:bg-teal-100/60 text-xs font-semibold text-teal-900 dark:text-teal-200 transition-colors"
+              >
+                <Users className="w-4 h-4 text-teal-500 shrink-0" />
+                <span className="truncate">+ Maid Salary</span>
+              </button>
+
+              <button
+                onClick={() => openPresetModal('FUEL_TRANSPORT', 'Monthly Petrol & Fuel', 'HPCL / BPCL / IOCL')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-pink-500/30 bg-pink-50/60 dark:bg-pink-950/30 hover:bg-pink-100/60 text-xs font-semibold text-pink-900 dark:text-pink-200 transition-colors"
+              >
+                <Fuel className="w-4 h-4 text-pink-500 shrink-0" />
+                <span className="truncate">+ Fuel / Petrol</span>
+              </button>
+
+              <button
+                onClick={() => openPresetModal('CHIT_FUND_VC', 'VC 1 (Monthly Chit)', 'Chit Organizer / Committee')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-amber-600/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
+              >
+                <Coins className="w-4 h-4 text-amber-600 shrink-0" />
+                <span className="truncate">+ VC 1 (Chit)</span>
+              </button>
+
+              <button
+                onClick={() => openPresetModal('CHIT_FUND_VC', 'VC 2 (Monthly Chit)', 'Chit Organizer / Committee')}
+                className="flex items-center gap-2 p-2.5 rounded-xl border border-amber-600/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
+              >
+                <Coins className="w-4 h-4 text-amber-600 shrink-0" />
+                <span className="truncate">+ VC 2 (Chit)</span>
               </button>
 
               <button
@@ -422,19 +541,11 @@ export const DebtsPage: React.FC = () => {
               </button>
 
               <button
-                onClick={() => openPresetModal('PERSONAL_BORROWING', 'Personal Borrowing / Hand Loan', 'Friend / Relative')}
+                onClick={() => openPresetModal('PERSONAL_BORROWING', 'Personal Hand Loan', 'Friend / Relative')}
                 className="flex items-center gap-2 p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/60 text-xs font-semibold text-emerald-900 dark:text-emerald-200 transition-colors"
               >
                 <HandCoins className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span className="truncate">+ Hand Loan</span>
-              </button>
-
-              <button
-                onClick={() => openPresetModal('CAR_LOAN', 'Car Loan EMI', 'ICICI / SBI Bank')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-blue-500/30 bg-blue-50/60 dark:bg-blue-950/30 hover:bg-blue-100/60 text-xs font-semibold text-blue-900 dark:text-blue-200 transition-colors"
-              >
-                <Car className="w-4 h-4 text-blue-500 shrink-0" />
-                <span className="truncate">+ Car EMI</span>
               </button>
             </div>
           </div>
@@ -444,33 +555,33 @@ export const DebtsPage: React.FC = () => {
             <div className="glass-card p-5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-amber-500 uppercase tracking-wider">
-                  Total Monthly Outgoings
+                  Total Monthly Commitments
                 </span>
                 <Calendar className="w-4 h-4 text-amber-500" />
               </div>
               <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
                 {formatINR(summary.totalMonthlyEmi)}
               </p>
-              <span className="text-xs text-slate-500">Committed across {debts.length} outgoing(s)</span>
+              <span className="text-xs text-slate-500">Rent + Groceries + Bills + EMIs</span>
             </div>
 
             <div className="glass-card p-5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-rose-500 uppercase tracking-wider">
-                  Total Outstanding Liability
+                  Total Outstanding Principal
                 </span>
                 <TrendingDown className="w-4 h-4 text-rose-500" />
               </div>
               <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
                 {formatINR(summary.totalOutstanding)}
               </p>
-              <span className="text-xs text-slate-500">Total remaining principal</span>
+              <span className="text-xs text-slate-500">Loans & Chit Schemes balance</span>
             </div>
 
             <div className="glass-card p-5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
-                  Commitment Ratio (DTI)
+                  Fixed Outgoing Ratio
                 </span>
                 <Percent className="w-4 h-4 text-brand-500" />
               </div>
@@ -478,11 +589,9 @@ export const DebtsPage: React.FC = () => {
                 {summary.debtToIncomeRatio.toFixed(1)}%
               </p>
               <span className="text-xs text-slate-500">
-                {summary.debtToIncomeRatio <= 30
-                  ? '✓ Healthy (<30% of salary)'
-                  : summary.debtToIncomeRatio <= 50
-                  ? '⚠ Moderate (30-50%)'
-                  : '🚨 Critical (>50% salary locked)'}
+                {summary.debtToIncomeRatio <= 50
+                  ? '✓ Safe committed load (<50%)'
+                  : '⚠ High committed load (>50%)'}
               </span>
             </div>
 
@@ -496,11 +605,11 @@ export const DebtsPage: React.FC = () => {
               <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
                 {formatINR(freeCashflow)}
               </p>
-              <span className="text-xs text-slate-500">Remaining for rent, food & savings</span>
+              <span className="text-xs text-slate-500">Left for savings & discretionary wants</span>
             </div>
           </div>
 
-          {/* Debts & Outgoings List */}
+          {/* Outgoings Cards Grid */}
           {debts.length === 0 ? (
             <div className="glass-card p-12 text-center space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto text-2xl">
@@ -508,35 +617,41 @@ export const DebtsPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  No Monthly Outgoings or EMIs Added Yet
+                  No Monthly Outgoings or Living Expenses Added Yet
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
-                  Add your monthly commitments like <strong>VC 1, VC 2, Bike EMI, SBI Card Min Due, RBL Card Min Due, and Hand Loans</strong>. RupeeTrack will organize your payment calendar and deduct them from your free cashflow.
+                  Add all your recurring monthly costs: <strong>Rent, Groceries, Milk, Electricity Bills, Maid Salary, Petrol, VC 1, VC 2, Bike EMI, and Card Minimum Dues</strong>.
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
                 <button
-                  onClick={() => openPresetModal('CHIT_FUND_VC', 'VC 1 (Monthly Chit)', 'Chit Organizer / Committee')}
-                  className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-md shadow-amber-500/25 transition-all"
+                  onClick={() => openPresetModal('RENT_HOUSING', 'House Rent', 'Landlord')}
+                  className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-500/25 transition-all"
                 >
-                  + Add VC 1 / Chit Fund
+                  + Add House Rent
                 </button>
                 <button
-                  onClick={() => openPresetModal('BIKE_LOAN', 'Bike EMI', 'Bank / Finance')}
+                  onClick={() => openPresetModal('GROCERIES_FOOD', 'Monthly Groceries', 'DMart')}
+                  className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-md shadow-amber-500/25 transition-all"
+                >
+                  + Add Groceries
+                </button>
+                <button
+                  onClick={() => openPresetModal('CHIT_FUND_VC', 'VC 1 (Monthly Chit)', 'Chit Committee')}
+                  className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs shadow-md shadow-purple-500/25 transition-all"
+                >
+                  + Add VC 1
+                </button>
+                <button
+                  onClick={() => openPresetModal('BIKE_LOAN', 'Bike EMI', 'Finance Company')}
                   className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-md shadow-rose-500/25 transition-all"
                 >
                   + Add Bike EMI
                 </button>
-                <button
-                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'SBI Card Min Due', 'SBI Card')}
-                  className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs shadow-md shadow-purple-500/25 transition-all"
-                >
-                  + Add Credit Card Due
-                </button>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {debts
                 .slice()
                 .sort((a, b) => a.dueDay - b.dueDay)
@@ -547,55 +662,60 @@ export const DebtsPage: React.FC = () => {
                   const progressPct = debt.originalAmount > 0 ? (paidAmount / debt.originalAmount) * 100 : 0;
 
                   return (
-                    <div key={debt.id} className="glass-card p-5 space-y-4 hover:shadow-lg transition-shadow">
-                      {/* Top Bar */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                            <Icon className={`w-5 h-5 ${config.color}`} />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{debt.name}</h4>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${config.badgeBg}`}>
-                                {config.label}
-                              </span>
+                    <div key={debt.id} className="glass-card p-5 space-y-4 hover:shadow-lg transition-shadow flex flex-col justify-between">
+                      <div>
+                        {/* Top Bar */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                              <Icon className={`w-5 h-5 ${config.color}`} />
                             </div>
-                            <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                              <Building className="w-3 h-3" /> {debt.lender}
-                              {debt.interestRate > 0 && <span>• {debt.interestRate}% p.a.</span>}
-                            </p>
+                            <div>
+                              <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug">{debt.name}</h4>
+                              <p className="text-[11px] text-slate-400 mt-0.5">
+                                {debt.lender}
+                                {debt.interestRate > 0 && <span> • {debt.interestRate}% p.a.</span>}
+                              </p>
+                            </div>
                           </div>
+
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${config.badgeBg}`}>
+                            {config.label}
+                          </span>
                         </div>
 
-                        <div className="text-right">
-                          <span className="text-sm font-extrabold text-brand-600 dark:text-brand-400">
+                        {/* Amount */}
+                        <div className="mt-3.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+                          <span className="text-xs text-slate-500 font-medium">Monthly Amount:</span>
+                          <span className="text-base font-extrabold text-brand-600 dark:text-brand-400">
                             {formatINR(debt.monthlyEmi)}/mo
                           </span>
                         </div>
                       </div>
 
-                      {/* Progress bar */}
-                      <div>
-                        <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5 font-medium">
-                          <span>Paid: {formatINR(paidAmount)}</span>
-                          <span>Outstanding: {formatINR(debt.outstandingAmount)}</span>
+                      {/* Progress bar (if applicable) */}
+                      {debt.originalAmount > debt.monthlyEmi && (
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+                            <span>Paid: {formatINR(paidAmount)}</span>
+                            <span>Remaining: {formatINR(debt.outstandingAmount)}</span>
+                          </div>
+                          <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-brand-500 to-emerald-500 rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(100, Math.max(5, progressPct))}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-brand-500 via-indigo-500 to-emerald-500 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(100, Math.max(5, progressPct))}%` }}
-                          />
-                        </div>
-                      </div>
+                      )}
 
                       {/* Bottom details & Actions */}
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
                         <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold text-[11px]">
-                          <Calendar className="w-3.5 h-3.5" /> Due on {debt.dueDay}th of every month
+                          <Calendar className="w-3.5 h-3.5" /> Due on {debt.dueDay}th
                         </span>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => handleOpenPayModal(debt)}
                             className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] border border-emerald-500/20 transition-colors flex items-center gap-1"
@@ -841,7 +961,7 @@ export const DebtsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal 1: Add Outgoing / Loan Modal */}
+      {/* Modal 1: Add Outgoing / Living Cost / EMI Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)} />
@@ -849,9 +969,9 @@ export const DebtsPage: React.FC = () => {
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  Add Monthly Outgoing / Loan Commitment
+                  Add Monthly Outgoing / Living Expense
                 </h3>
-                <p className="text-[11px] text-slate-400">Add VC, Bike EMI, Card Minimum Due, Hand Loan or Bank EMI</p>
+                <p className="text-[11px] text-slate-400">Rent, Groceries, Milk, Bills, Maid, VC 1, VC 2, Bike EMI & Cards</p>
               </div>
               <button onClick={() => setIsAddModalOpen(false)}>
                 <X className="w-5 h-5 text-slate-400 hover:text-slate-600" />
@@ -860,12 +980,18 @@ export const DebtsPage: React.FC = () => {
 
             <form onSubmit={handleAddDebt} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Outgoing Type</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Outgoing Category</label>
                 <select
                   value={type}
                   onChange={(e) => {
                     const newType = e.target.value as DebtType;
                     setType(newType);
+                    if (newType === 'RENT_HOUSING' && !name) setName('House Rent');
+                    if (newType === 'GROCERIES_FOOD' && !name) setName('Monthly Groceries (DMart)');
+                    if (newType === 'MILK_DAIRY' && !name) setName('Daily Milk (Amul/Country Delight)');
+                    if (newType === 'UTILITIES_BILLS' && !name) setName('Electricity & Gas Bills');
+                    if (newType === 'MAID_COOK' && !name) setName('House Maid / Cook Salary');
+                    if (newType === 'FUEL_TRANSPORT' && !name) setName('Petrol & Fuel Commute');
                     if (newType === 'CHIT_FUND_VC' && !name) setName('VC 1 (Monthly Chit)');
                     if (newType === 'BIKE_LOAN' && !name) setName('Bike EMI');
                     if (newType === 'CREDIT_CARD_MIN_PAYMENT' && !name) setName('SBI Card Min Due');
@@ -873,27 +999,38 @@ export const DebtsPage: React.FC = () => {
                   }}
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium"
                 >
-                  <option value="CHIT_FUND_VC">🪙 VC / Chit Fund (VC 1, VC 2, Committee)</option>
-                  <option value="BIKE_LOAN">🏍 Bike / Superbike Loan EMI</option>
-                  <option value="CREDIT_CARD_MIN_PAYMENT">💳 Credit Card Minimum Due (SBI/RBL/HDFC)</option>
-                  <option value="PERSONAL_BORROWING">🤝 Personal Borrowing / Hand Loan</option>
-                  <option value="CAR_LOAN">🚗 Car Loan EMI</option>
-                  <option value="HOME_LOAN">🏠 Home Loan / Mortgage EMI</option>
-                  <option value="PERSONAL_LOAN">💼 Bank Personal Loan</option>
-                  <option value="EDUCATION_LOAN">🎓 Education Loan</option>
-                  <option value="OTHER_OUTGOING">🔄 Other Monthly Fixed Commitment</option>
+                  <optgroup label="🏠 Monthly Living Essentials">
+                    <option value="RENT_HOUSING">🏠 House Rent & Society Maintenance</option>
+                    <option value="GROCERIES_FOOD">🛒 Monthly Groceries (DMart / Supermarket)</option>
+                    <option value="MILK_DAIRY">🥛 Daily Milk & Dairy (Amul / Country Delight)</option>
+                    <option value="UTILITIES_BILLS">⚡ Electricity, Water & Gas Bills</option>
+                    <option value="MAID_COOK">🧹 House Maid & Cook Salary</option>
+                    <option value="FUEL_TRANSPORT">⛽ Monthly Petrol & Fuel Commute</option>
+                    <option value="FAMILY_PERSONAL">👨‍👩‍👧 Wife / Partner / Family Allowance</option>
+                  </optgroup>
+                  <optgroup label="💳 Fixed EMIs, Chits & Cards">
+                    <option value="CHIT_FUND_VC">🪙 VC / Chit Fund (VC 1, VC 2, Committee)</option>
+                    <option value="BIKE_LOAN">🏍 Bike / Superbike Loan EMI</option>
+                    <option value="CREDIT_CARD_MIN_PAYMENT">💳 Credit Card Minimum Due (SBI/RBL/HDFC)</option>
+                    <option value="PERSONAL_BORROWING">🤝 Personal Borrowing / Hand Loan</option>
+                    <option value="CAR_LOAN">🚗 Car Loan EMI</option>
+                    <option value="HOME_LOAN">🏠 Home Loan / Mortgage EMI</option>
+                    <option value="PERSONAL_LOAN">💼 Bank Personal Loan</option>
+                    <option value="EDUCATION_LOAN">🎓 Education Loan</option>
+                    <option value="OTHER_OUTGOING">🔄 Other Monthly Fixed Commitment</option>
+                  </optgroup>
                 </select>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Commitment Name
+                    Expense / Commitment Name
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. VC 1 / Bike EMI / SBI Card"
+                    placeholder="e.g. House Rent / DMart / VC 1 / Bike EMI"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
@@ -901,12 +1038,12 @@ export const DebtsPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Lender / Person / Bank
+                    Paid To / Vendor / Lender
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Committee Name / SBI / Friend Name"
+                    placeholder="e.g. Landlord / DMart / SBI / Committee"
                     value={lender}
                     onChange={(e) => setLender(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
@@ -917,12 +1054,12 @@ export const DebtsPage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Monthly Payment / EMI (₹)
+                    Monthly Planned Amount (₹)
                   </label>
                   <input
                     type="number"
                     required
-                    placeholder="e.g. 5000"
+                    placeholder="e.g. 12000"
                     value={monthlyEmi}
                     onChange={(e) => setMonthlyEmi(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold"
@@ -930,7 +1067,7 @@ export const DebtsPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Payment Due Day (1-31)
+                    Due Day of Month (1-31)
                   </label>
                   <input
                     type="number"
@@ -943,50 +1080,11 @@ export const DebtsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Total / Scheme Amount (₹)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 100000"
-                    value={originalAmount}
-                    onChange={(e) => setOriginalAmount(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Outstanding Remaining (₹)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 60000"
-                    value={outstandingAmount}
-                    onChange={(e) => setOutstandingAmount(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Interest % (0 for VC/Hand)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={interestRate}
-                    onChange={(e) => setInterestRate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Notes / Duration</label>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Notes / Description</label>
                 <input
                   type="text"
-                  placeholder="e.g. 20-month chit fund cycle, ending Dec 2026"
+                  placeholder="e.g. 2BHK flat rent / Monthly grocery allowance / 20-month chit"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
@@ -999,7 +1097,7 @@ export const DebtsPage: React.FC = () => {
                   className="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/25 flex items-center justify-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
-                  <span>Save Outgoing Commitment</span>
+                  <span>Save Monthly Outgoing</span>
                 </button>
               </div>
             </form>
@@ -1007,7 +1105,7 @@ export const DebtsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal 2: Log Payment Modal for Debt */}
+      {/* Modal 2: Log Payment Modal for Outgoing */}
       {isPayModalOpen && selectedDebtToPay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsPayModalOpen(false)} />
@@ -1038,7 +1136,7 @@ export const DebtsPage: React.FC = () => {
               </div>
 
               <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-[11px]">
-                💡 This will record an expense transaction for this month and reduce the remaining outstanding balance of <strong>{selectedDebtToPay.name}</strong> by {formatINR(parseFloat(payAmount) || 0)}.
+                💡 This will record an expense transaction for this month and automatically update your cash flow and account balance for <strong>{selectedDebtToPay.name}</strong> ({formatINR(parseFloat(payAmount) || 0)}).
               </div>
 
               <button

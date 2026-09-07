@@ -14,11 +14,12 @@ import {
   Sparkles,
   Zap,
 } from 'lucide-react';
+import { QuickExpenseLoggerBar } from '../components/dashboard/QuickExpenseLoggerBar';
 import { Link } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 
 export const BudgetsPage: React.FC = () => {
-  const { user, selectedMonth, categories, refreshTrigger, triggerRefresh } = useFinance();
+  const { user, selectedMonth, categories, refreshTrigger, triggerRefresh, openQuickModalWithPreset } = useFinance();
   const [budget, setBudget] = useState<Budget | null>(null);
   const [spentMap, setSpentMap] = useState<Record<string, number>>({});
   const [isEditing, setIsEditing] = useState(false);
@@ -94,10 +95,10 @@ export const BudgetsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-            Monthly Budgets
+            Monthly Budgets & Spend Planning
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Set and track spending limits by category with real-time utilization warnings
+            Set and track spending limits for Rent, Groceries, Milk, Utilities & EMIs
           </p>
         </div>
 
@@ -130,6 +131,9 @@ export const BudgetsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Quick Expense Logger Strip */}
+      <QuickExpenseLoggerBar />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -188,32 +192,51 @@ export const BudgetsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {isEditing ? (
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-slate-400 font-bold">₹</span>
-                      <input
-                        type="number"
-                        value={limit || ''}
-                        onChange={(e) =>
-                          setBudgetLimits({ ...budgetLimits, [cat.id]: parseFloat(e.target.value) || 0 })
-                        }
-                        placeholder="Limit"
-                        className="w-24 px-2 py-1 text-xs font-bold rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-right"
-                      />
-                    </div>
-                  ) : (
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isExceeded
-                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
-                          : isWarning
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                      }`}
-                    >
-                      {utilization.toFixed(0)}% Used
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isEditing ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-slate-400 font-bold">₹</span>
+                        <input
+                          type="number"
+                          value={limit || ''}
+                          onChange={(e) =>
+                            setBudgetLimits({ ...budgetLimits, [cat.id]: parseFloat(e.target.value) || 0 })
+                          }
+                          placeholder="Limit"
+                          className="w-24 px-2 py-1 text-xs font-bold rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-right"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            isExceeded
+                              ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                              : isWarning
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                          }`}
+                        >
+                          {utilization.toFixed(0)}% Used
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openQuickModalWithPreset({
+                              categoryId: cat.id,
+                              subcategoryId: cat.subcategories?.[0]?.id,
+                              description: cat.subcategories?.[0]?.name || cat.name,
+                              mode: 'EXPENSE',
+                            })
+                          }
+                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-50 hover:text-brand-600 text-slate-500 text-xs font-bold transition-colors"
+                          title={`Log spend under ${cat.name}`}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Progress bar */}
@@ -229,6 +252,28 @@ export const BudgetsPage: React.FC = () => {
                 <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
                   <span>Spent: {formatINR(spent)}</span>
                   <span>Budget: {formatINR(limit)}</span>
+                </div>
+
+                {/* Subcategories tags */}
+                <div className="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                  {(cat.subcategories || []).map((sub) => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() =>
+                        openQuickModalWithPreset({
+                          categoryId: cat.id,
+                          subcategoryId: sub.id,
+                          description: sub.name,
+                          mode: 'EXPENSE',
+                        })
+                      }
+                      className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-50 dark:bg-slate-800/80 hover:bg-brand-50 hover:text-brand-600 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60 transition-colors flex items-center gap-1"
+                    >
+                      <span>{sub.icon}</span>
+                      <span>{sub.name}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             );

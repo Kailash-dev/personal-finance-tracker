@@ -264,28 +264,52 @@ export const DEFAULT_MERCHANT_RULES: Omit<MerchantRule, 'id' | 'userId' | 'creat
   { pattern: 'ATM WDL|CASH WDL|ATM CASH|NFS WDL|EAW-', merchantName: 'ATM Cash Withdrawal', categoryId: 'cat_transfer', subcategoryId: 'sub_cash_withdrawal', defaultType: 'CASH_WITHDRAWAL', confidenceScore: 0.98, isRegex: true },
 ];
 
-export const QUICK_CATEGORY_CHIPS = [
-  { id: 'cat_food', name: 'Food', icon: '🍛' },
-  { id: 'cat_food:sub_groceries', name: 'Grocery', icon: '🛒' },
-  { id: 'cat_housing:sub_rent', name: 'Rent', icon: '🏠' },
-  { id: 'cat_transport:sub_petrol', name: 'Fuel', icon: '⛽' },
-  { id: 'cat_food:sub_milk', name: 'Milk', icon: '🥛' },
-  { id: 'cat_financial:sub_emi_car', name: 'EMI', icon: '💳' },
-  { id: 'cat_family:sub_shopping', name: 'Shopping', icon: '🛍' },
-  { id: 'cat_transport:sub_auto_cab', name: 'Transport', icon: '🚕' },
-  { id: 'cat_healthcare:sub_medicines', name: 'Medical', icon: '💊' },
-  { id: 'cat_utilities:sub_mobile', name: 'Bills', icon: '📱' },
-  { id: 'cat_family:sub_wife_personal', name: 'Family', icon: '👨‍👩‍👧' },
-  { id: 'cat_investment:sub_sip', name: 'SIP', icon: '📈' },
-  { id: 'cat_misc:sub_misc_other', name: 'Other', icon: '💰' },
+export interface QuickExpenseChip {
+  id: string;
+  name: string;
+  icon: string;
+  defaultDesc: string;
+  group?: 'essentials' | 'bills' | 'lifestyle' | 'financial';
+}
+
+export const QUICK_CATEGORY_CHIPS: QuickExpenseChip[] = [
+  // 1. Daily & Monthly Essentials
+  { id: 'cat_housing:sub_rent', name: 'Rent', icon: '🏠', defaultDesc: 'Monthly House Rent', group: 'essentials' },
+  { id: 'cat_food:sub_groceries', name: 'Groceries', icon: '🛒', defaultDesc: 'Groceries (D-Mart/Blinkit)', group: 'essentials' },
+  { id: 'cat_food:sub_milk', name: 'Milk & Dairy', icon: '🥛', defaultDesc: 'Daily Milk (Amul/Country Delight)', group: 'essentials' },
+  { id: 'cat_food:sub_vegetables', name: 'Vegetables', icon: '🥦', defaultDesc: 'Vegetables & Sabzi Mandi', group: 'essentials' },
+  { id: 'cat_transport:sub_petrol', name: 'Fuel / Petrol', icon: '⛽', defaultDesc: 'Petrol / Diesel Fuel', group: 'essentials' },
+  { id: 'cat_utilities:sub_maid', name: 'Maid / Cook', icon: '🧹', defaultDesc: 'Maid & Cook Salary', group: 'essentials' },
+
+  // 2. Bills & Utilities
+  { id: 'cat_utilities:sub_electricity', name: 'Electricity', icon: '⚡', defaultDesc: 'Electricity Bill', group: 'bills' },
+  { id: 'cat_utilities:sub_wifi', name: 'Wi-Fi / Net', icon: '📶', defaultDesc: 'Broadband / Wi-Fi Bill', group: 'bills' },
+  { id: 'cat_utilities:sub_mobile', name: 'Mobile Recharge', icon: '📱', defaultDesc: 'Mobile Recharge (Jio/Airtel)', group: 'bills' },
+  { id: 'cat_utilities:sub_water', name: 'Gas / LPG', icon: '🔥', defaultDesc: 'LPG Gas Cylinder / Piped Gas', group: 'bills' },
+  { id: 'cat_housing:sub_maintenance', name: 'Society Maint.', icon: '🏢', defaultDesc: 'Society Maintenance Fee', group: 'bills' },
+
+  // 3. Lifestyle & Family
+  { id: 'cat_food:sub_delivery', name: 'Swiggy/Zomato', icon: '🛵', defaultDesc: 'Food Delivery (Swiggy/Zomato)', group: 'lifestyle' },
+  { id: 'cat_food:sub_restaurants', name: 'Dining / Chai', icon: '🍽', defaultDesc: 'Dining Out & Chai', group: 'lifestyle' },
+  { id: 'cat_family:sub_shopping', name: 'Shopping', icon: '🛍', defaultDesc: 'Shopping (Amazon/Myntra)', group: 'lifestyle' },
+  { id: 'cat_family:sub_wife_personal', name: 'Wife / Family', icon: '👨‍👩‍👧', defaultDesc: 'Wife / Family Allowance', group: 'lifestyle' },
+  { id: 'cat_healthcare:sub_medicines', name: 'Medicines', icon: '💊', defaultDesc: 'Medicines & Pharmacy (Apollo/1mg)', group: 'lifestyle' },
+
+  // 4. Financial, Loans & EMIs
+  { id: 'cat_financial:sub_emi_bike', name: 'Bike EMI', icon: '🏍', defaultDesc: 'Bike Loan EMI', group: 'financial' },
+  { id: 'cat_financial:sub_emi_car', name: 'Car EMI', icon: '🚗', defaultDesc: 'Car Loan EMI', group: 'financial' },
+  { id: 'cat_financial:sub_bank_charges', name: 'Chit Fund / VC', icon: '🪙', defaultDesc: 'Chit Fund (VC 1 / VC 2)', group: 'financial' },
+  { id: 'cat_financial:sub_cc_payment', name: 'Card Dues', icon: '💳', defaultDesc: 'Credit Card Bill Payment', group: 'financial' },
+  { id: 'cat_investment:sub_sip', name: 'SIP Investment', icon: '📈', defaultDesc: 'Mutual Fund SIP (Groww/Zerodha)', group: 'financial' },
+  { id: 'cat_misc:sub_misc_other', name: 'Other Misc', icon: '📦', defaultDesc: 'Miscellaneous Expense', group: 'lifestyle' },
 ];
 
 export const QUICK_INCOME_CHIPS = [
-  { id: 'cat_income:sub_salary', name: 'Salary', icon: '💼' },
-  { id: 'cat_income:sub_freelance', name: 'Freelance', icon: '💻' },
-  { id: 'cat_income:sub_dividend', name: 'Investments', icon: '📈' },
-  { id: 'cat_income:sub_rental_income', name: 'Rent Received', icon: '🏠' },
-  { id: 'cat_income:sub_cashback', name: 'Bonus/Cashback', icon: '🎁' },
-  { id: 'cat_income:sub_other_income', name: 'Other Income', icon: '💵' },
+  { id: 'cat_income:sub_salary', name: 'Salary', icon: '💼', defaultDesc: 'Monthly In-Hand Salary' },
+  { id: 'cat_income:sub_freelance', name: 'Freelance', icon: '💻', defaultDesc: 'Freelance / Client Payment' },
+  { id: 'cat_income:sub_dividend', name: 'Investments', icon: '📈', defaultDesc: 'Dividend / Interest Return' },
+  { id: 'cat_income:sub_rental_income', name: 'Rent Received', icon: '🏠', defaultDesc: 'Rental Property Income' },
+  { id: 'cat_income:sub_cashback', name: 'Cashback/Bonus', icon: '🎁', defaultDesc: 'Cashback / Performance Bonus' },
+  { id: 'cat_income:sub_other_income', name: 'Other Income', icon: '💵', defaultDesc: 'Other Income / Credits' },
 ];
 

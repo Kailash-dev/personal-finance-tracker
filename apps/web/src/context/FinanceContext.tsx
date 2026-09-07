@@ -3,6 +3,14 @@ import { User, Account, Category } from '@personal-finance/types';
 import { dataProvider } from '../services/dataProvider';
 import { storageService } from '../services/storageService';
 
+export interface QuickModalPreset {
+  categoryId?: string;
+  subcategoryId?: string;
+  description?: string;
+  amount?: number;
+  mode?: 'EXPENSE' | 'INCOME' | 'TRANSFER';
+}
+
 interface FinanceContextType {
   user: User | null;
   accounts: Account[];
@@ -15,6 +23,8 @@ interface FinanceContextType {
   toggleTheme: () => void;
   isQuickModalOpen: boolean;
   setIsQuickModalOpen: (open: boolean) => void;
+  quickModalPreset: QuickModalPreset | null;
+  openQuickModalWithPreset: (preset?: QuickModalPreset) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -26,11 +36,17 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [selectedMonth, setSelectedMonth] = useState<string>(() => new Date().toISOString().slice(0, 7));
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isQuickModalOpen, setIsQuickModalOpen] = useState(false);
+  const [quickModalPreset, setQuickModalPreset] = useState<QuickModalPreset | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('rupeetrack_theme');
     if (saved === 'dark' || saved === 'light') return saved;
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
+
+  const openQuickModalWithPreset = (preset?: QuickModalPreset) => {
+    setQuickModalPreset(preset || null);
+    setIsQuickModalOpen(true);
+  };
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -77,6 +93,8 @@ export const FinanceProvider: React.FC<{ children: ReactNode }> = ({ children })
         toggleTheme,
         isQuickModalOpen,
         setIsQuickModalOpen,
+        quickModalPreset,
+        openQuickModalWithPreset,
       }}
     >
       {children}

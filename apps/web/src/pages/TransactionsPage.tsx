@@ -3,6 +3,7 @@ import { useFinance } from '../context/FinanceContext';
 import { dataProvider } from '../services/dataProvider';
 import { Transaction } from '@personal-finance/types';
 import { formatINR } from '@personal-finance/shared';
+import { QuickExpenseLoggerBar } from '../components/dashboard/QuickExpenseLoggerBar';
 import {
   Search,
   Filter,
@@ -16,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export const TransactionsPage: React.FC = () => {
-  const { categories, accounts, refreshTrigger, triggerRefresh, setIsQuickModalOpen } = useFinance();
+  const { categories, accounts, refreshTrigger, triggerRefresh, openQuickModalWithPreset } = useFinance();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -77,10 +78,10 @@ export const TransactionsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-            Transactions
+            Transactions & Expenses
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Search, filter, and manage all your bank, cash, and UPI transactions
+            Search, filter, and log all your bank, cash, Rent, Groceries, and UPI transactions
           </p>
         </div>
 
@@ -93,7 +94,7 @@ export const TransactionsPage: React.FC = () => {
             <span>Export CSV</span>
           </button>
           <button
-            onClick={() => setIsQuickModalOpen(true)}
+            onClick={() => openQuickModalWithPreset()}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-md shadow-brand-500/25 transition-all"
           >
             <Plus className="w-4 h-4" />
@@ -101,6 +102,9 @@ export const TransactionsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Quick Expense Logger Strip */}
+      <QuickExpenseLoggerBar />
 
       {/* Filter Bar */}
       <div className="glass-card p-4 space-y-3">

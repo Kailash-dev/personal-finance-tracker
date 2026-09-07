@@ -441,22 +441,63 @@ class StorageService {
     d.updatedAt = new Date().toISOString();
     localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(debts));
 
+    // Determine exact category and transaction type
+    let catId = 'cat_financial';
+    let subId: string | undefined = 'sub_emi_personal';
+    let txType: any = 'DEBT_PAYMENT';
+
+    if (d.type === 'RENT_HOUSING') {
+      catId = 'cat_housing';
+      subId = 'sub_rent';
+      txType = 'EXPENSE';
+    } else if (d.type === 'GROCERIES_FOOD') {
+      catId = 'cat_food';
+      subId = 'sub_groceries';
+      txType = 'EXPENSE';
+    } else if (d.type === 'MILK_DAIRY') {
+      catId = 'cat_food';
+      subId = 'sub_milk';
+      txType = 'EXPENSE';
+    } else if (d.type === 'UTILITIES_BILLS') {
+      catId = 'cat_utilities';
+      subId = 'sub_electricity';
+      txType = 'EXPENSE';
+    } else if (d.type === 'MAID_COOK') {
+      catId = 'cat_utilities';
+      subId = 'sub_maid';
+      txType = 'EXPENSE';
+    } else if (d.type === 'FUEL_TRANSPORT') {
+      catId = 'cat_transport';
+      subId = 'sub_petrol';
+      txType = 'EXPENSE';
+    } else if (d.type === 'FAMILY_PERSONAL') {
+      catId = 'cat_family';
+      subId = 'sub_wife_personal';
+      txType = 'EXPENSE';
+    } else if (d.type === 'BIKE_LOAN') {
+      catId = 'cat_financial';
+      subId = 'sub_emi_bike';
+      txType = 'DEBT_PAYMENT';
+    } else if (d.type === 'CAR_LOAN') {
+      catId = 'cat_financial';
+      subId = 'sub_emi_car';
+      txType = 'DEBT_PAYMENT';
+    } else if (d.type === 'CREDIT_CARD_MIN_PAYMENT') {
+      catId = 'cat_financial';
+      subId = 'sub_cc_payment';
+      txType = 'DEBT_PAYMENT';
+    }
+
     // Log as transaction
     const finalDate = date || new Date().toISOString().split('T')[0];
     this.createTransaction({
       accountId: accountId || 'acc_primary',
-      categoryId: 'cat_financial',
-      subcategoryId: d.type.toLowerCase().includes('bike')
-        ? 'sub_emi_bike'
-        : d.type.toLowerCase().includes('car')
-        ? 'sub_emi_car'
-        : d.type.toLowerCase().includes('card')
-        ? 'sub_cc_payment'
-        : 'sub_emi_personal',
+      categoryId: catId,
+      subcategoryId: subId,
       date: finalDate,
       description: `Monthly Payment: ${d.name} (${d.lender})`,
       amount: -amount,
-      type: 'DEBT_PAYMENT',
+      type: txType,
       paymentMethod: 'UPI',
     });
   }
