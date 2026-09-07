@@ -82,11 +82,9 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
   const currentMonthBorrowings = borrowings.filter((b) => {
     if (b.type !== 'BORROWED') return false;
     if (b.borrowDate && b.borrowDate.startsWith(selectedMonth)) return true;
-    return isSeptember;
+    return false;
   });
-  const currentMonthBorrowedTotal = isAugust
-    ? 0
-    : currentMonthBorrowings.reduce((sum, b) => sum + (b.amount || 0), 0) || 14100;
+  const currentMonthBorrowedTotal = currentMonthBorrowings.reduce((sum, b) => sum + (b.amount || 0), 0);
 
   // 2. Amount Paid Towards Debt / EMIs
   const debtTxns = transactions.filter(
@@ -103,23 +101,21 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
         t.description.toLowerCase().includes('settlement'))
   );
   const debtPaidActual = debtTxns.reduce((sum, t) => sum + t.amount, 0);
-  const debtPlannedTotal = isAugust
-    ? 24285
-    : debts
-        .filter((d) =>
-          [
-            'PERSONAL_LOAN',
-            'BIKE_LOAN',
-            'CAR_LOAN',
-            'HOME_LOAN',
-            'CREDIT_CARD_MIN_PAYMENT',
-            'CHIT_FUND_VC',
-            'PERSONAL_BORROWING',
-            'EDUCATION_LOAN',
-            'OTHER_OUTGOING',
-          ].includes(d.type)
-        )
-        .reduce((sum, d) => sum + (d.monthlyEmi || 0), 0) || 57908;
+  const debtPlannedTotal = debts
+    .filter((d) =>
+      [
+        'PERSONAL_LOAN',
+        'BIKE_LOAN',
+        'CAR_LOAN',
+        'HOME_LOAN',
+        'CREDIT_CARD_MIN_PAYMENT',
+        'CHIT_FUND_VC',
+        'PERSONAL_BORROWING',
+        'EDUCATION_LOAN',
+        'OTHER_OUTGOING',
+      ].includes(d.type)
+    )
+    .reduce((sum, d) => sum + (d.monthlyEmi || 0), 0);
 
   // 3. Helper to sum transaction amounts matching category keywords
   const getCategoryActual = (categoryIds: string[], subcategoryIds: string[], keywords: string[] = []) => {
@@ -158,10 +154,10 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
       color: 'text-rose-600 dark:text-rose-400',
       bgLight: 'bg-rose-50 border-rose-200',
       bgDark: 'dark:bg-rose-950/30 dark:border-rose-900/40',
-      plannedAmount: isAugust ? 0 : 14100,
+      plannedAmount: currentMonthBorrowedTotal,
       actualSpent: currentMonthBorrowedTotal,
       status: currentMonthBorrowedTotal > 0 ? 'PAID' : 'PENDING',
-      notes: isAugust ? 'No new borrowings logged' : 'Rajni Ji (₹5k) + Friend (₹5k) + Broker (₹4.1k)',
+      notes: currentMonthBorrowedTotal > 0 ? `${currentMonthBorrowings.length} Active Borrowing(s) Logged` : 'No borrowings recorded for this month',
       preset: {
         categoryId: 'cat_income',
         subcategoryId: 'sub_other_income',
@@ -177,16 +173,16 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
       color: 'text-purple-600 dark:text-purple-400',
       bgLight: 'bg-purple-50 border-purple-200',
       bgDark: 'dark:bg-purple-950/30 dark:border-purple-900/40',
-      plannedAmount: isAugust ? 24285 : debtPlannedTotal,
-      actualSpent: isAugust ? 24285 : (debtPaidActual || 7000),
+      plannedAmount: debtPlannedTotal,
+      actualSpent: debtPaidActual,
       dueDay: 10,
-      status: debtPaidActual >= debtPlannedTotal ? 'PAID' : debtPaidActual > 0 ? 'PARTIAL' : 'PENDING',
-      notes: isAugust ? 'Aug EMIs & CRED paid' : 'Bike EMI, Chit VC2, Bajaj Mobile, SBI Card & Personal Loans',
+      status: debtPlannedTotal > 0 && debtPaidActual >= debtPlannedTotal ? 'PAID' : debtPaidActual > 0 ? 'PARTIAL' : 'PENDING',
+      notes: debtPlannedTotal > 0 ? `${debts.length} active loan/debt commitments` : 'No active debts added yet',
       preset: {
         categoryId: 'cat_financial',
         subcategoryId: 'sub_emi_bike',
-        description: 'Bike Loan EMI Payment',
-        amount: 6250,
+        description: 'Debt / Loan EMI Payment',
+        amount: debtPlannedTotal || 5000,
       },
     },
     {
@@ -197,10 +193,10 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
       color: 'text-indigo-600 dark:text-indigo-400',
       bgLight: 'bg-indigo-50 border-indigo-200',
       bgDark: 'dark:bg-indigo-950/30 dark:border-indigo-900/40',
-      plannedAmount: isAugust ? 15000 : 15000,
-      actualSpent: isAugust ? 15000 : rentActual,
+      plannedAmount: rentActual,
+      actualSpent: rentActual,
       dueDay: 10,
-      status: (isAugust ? 15000 : rentActual) >= 15000 ? 'PAID' : 'PENDING',
+      status: rentActual > 0 ? 'PAID' : 'PENDING',
       notes: 'Monthly Flat Rent & Society Maintenance',
       preset: {
         categoryId: 'cat_housing',
@@ -217,16 +213,16 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
       color: 'text-amber-600 dark:text-amber-400',
       bgLight: 'bg-amber-50 border-amber-200',
       bgDark: 'dark:bg-amber-950/30 dark:border-amber-900/40',
-      plannedAmount: isAugust ? 4000 : 6000,
-      actualSpent: isAugust ? 4250 : (groceryActual || 1850),
+      plannedAmount: groceryActual,
+      actualSpent: groceryActual,
       dueDay: 15,
-      status: (isAugust ? 4250 : groceryActual) >= 4000 ? 'PAID' : 'PARTIAL',
+      status: groceryActual > 0 ? 'PAID' : 'PENDING',
       notes: 'DMart, Blinkit, Supermarket & monthly kitchen staples',
       preset: {
         categoryId: 'cat_food',
         subcategoryId: 'sub_groceries',
-        description: 'DMart Monthly Grocery Shopping',
-        amount: 4000,
+        description: 'Grocery Shopping',
+        amount: 3000,
       },
     },
     {
@@ -237,10 +233,10 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
       color: 'text-yellow-600 dark:text-yellow-400',
       bgLight: 'bg-yellow-50 border-yellow-200',
       bgDark: 'dark:bg-yellow-950/30 dark:border-yellow-900/40',
-      plannedAmount: isAugust ? 1150 : 1200,
-      actualSpent: isAugust ? 1150 : lightbillActual,
+      plannedAmount: lightbillActual,
+      actualSpent: lightbillActual,
       dueDay: 15,
-      status: (isAugust ? 1150 : lightbillActual) > 0 ? 'PAID' : 'PENDING',
+      status: lightbillActual > 0 ? 'PAID' : 'PENDING',
       notes: 'Monthly Electricity & Power Utility Bill',
       preset: {
         categoryId: 'cat_utilities',
@@ -257,10 +253,10 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
       color: 'text-cyan-600 dark:text-cyan-400',
       bgLight: 'bg-cyan-50 border-cyan-200',
       bgDark: 'dark:bg-cyan-950/30 dark:border-cyan-900/40',
-      plannedAmount: isAugust ? 800 : 800,
-      actualSpent: isAugust ? 800 : wifibillActual,
+      plannedAmount: wifibillActual,
+      actualSpent: wifibillActual,
       dueDay: 18,
-      status: (isAugust ? 800 : wifibillActual) > 0 ? 'PAID' : 'PENDING',
+      status: wifibillActual > 0 ? 'PAID' : 'PENDING',
       notes: 'High-speed Fiber / Wi-Fi Internet Connection',
       preset: {
         categoryId: 'cat_utilities',
@@ -277,16 +273,16 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
       color: 'text-sky-600 dark:text-sky-400',
       bgLight: 'bg-sky-50 border-sky-200',
       bgDark: 'dark:bg-sky-950/30 dark:border-sky-900/40',
-      plannedAmount: isAugust ? 1500 : 1500,
-      actualSpent: isAugust ? 1480 : (dairyActual || 420),
+      plannedAmount: dairyActual,
+      actualSpent: dairyActual,
       dueDay: 30,
-      status: (isAugust ? 1480 : dairyActual) >= 1200 ? 'PAID' : 'PARTIAL',
+      status: dairyActual > 0 ? 'PAID' : 'PENDING',
       notes: 'Daily Milk, Curd, Country Delight / Amul delivery',
       preset: {
         categoryId: 'cat_food',
         subcategoryId: 'sub_milk',
-        description: 'Daily Milk & Dairy Payment',
-        amount: 1500,
+        description: 'Milk & Dairy Payment',
+        amount: 1200,
       },
     },
     {
@@ -297,11 +293,11 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
       color: 'text-orange-600 dark:text-orange-400',
       bgLight: 'bg-orange-50 border-orange-200',
       bgDark: 'dark:bg-orange-950/30 dark:border-orange-900/40',
-      plannedAmount: isAugust ? 3500 : 3500,
-      actualSpent: isAugust ? 3840 : (outsideEatingActual || 1240),
+      plannedAmount: outsideEatingActual,
+      actualSpent: outsideEatingActual,
       dueDay: 30,
-      status: (isAugust ? 3840 : outsideEatingActual) >= 3500 ? 'PAID' : 'PARTIAL',
-      notes: 'Swiggy, Zomato, Restaurant dining, cafes & weekend treats',
+      status: outsideEatingActual > 0 ? 'PAID' : 'PENDING',
+      notes: 'Swiggy, Zomato, Restaurant dining, cafes & food orders',
       preset: {
         categoryId: 'cat_food',
         subcategoryId: 'sub_delivery',
@@ -317,16 +313,16 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
       color: 'text-pink-600 dark:text-pink-400',
       bgLight: 'bg-pink-50 border-pink-200',
       bgDark: 'dark:bg-pink-950/30 dark:border-pink-900/40',
-      plannedAmount: isAugust ? 3000 : 2500,
-      actualSpent: isAugust ? 2950 : (shoppingActual || 650),
+      plannedAmount: shoppingActual,
+      actualSpent: shoppingActual,
       dueDay: 30,
-      status: (isAugust ? 2950 : shoppingActual) >= 2500 ? 'PAID' : 'PARTIAL',
+      status: shoppingActual > 0 ? 'PAID' : 'PENDING',
       notes: 'Amazon, Flipkart, Myntra, clothes & household items',
       preset: {
         categoryId: 'cat_family',
         subcategoryId: 'sub_shopping',
         description: 'Amazon Online Shopping',
-        amount: 1200,
+        amount: 1000,
       },
     },
     {
@@ -337,27 +333,26 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
       color: 'text-teal-600 dark:text-teal-400',
       bgLight: 'bg-teal-50 border-teal-200',
       bgDark: 'dark:bg-teal-950/30 dark:border-teal-900/40',
-      plannedAmount: isAugust ? 4200 : 4500,
-      actualSpent: isAugust ? 4180 : (subscriptionsAndOtherActual || 1600),
+      plannedAmount: subscriptionsAndOtherActual,
+      actualSpent: subscriptionsAndOtherActual,
       dueDay: 20,
-      status: (isAugust ? 4180 : subscriptionsAndOtherActual) >= 4000 ? 'PAID' : 'PARTIAL',
+      status: subscriptionsAndOtherActual > 0 ? 'PAID' : 'PENDING',
       notes: 'Netflix, Prime, Mobile recharge, Maid salary, Petrol & Gym',
       preset: {
         categoryId: 'cat_utilities',
         subcategoryId: 'sub_dth',
-        description: 'Netflix / Prime OTT Subscription',
+        description: 'Subscription / Other Need',
         amount: 649,
       },
     },
   ];
 
   // Totals calculations
-  const totalPlannedOutflows = runningItems.reduce((sum, item) => sum + item.plannedAmount, 0);
   const totalActualSpentOutflows = runningItems.reduce((sum, item) => sum + item.actualSpent, 0);
-  const monthlySalary = 50000;
-  const openingKotakBal = 4713.39;
-  const totalAvailableInflow = monthlySalary + openingKotakBal;
-  const remainingSafeBalance = totalAvailableInflow - totalActualSpentOutflows;
+  const totalIncomeInflow = transactions
+    .filter((t) => t.type === 'INCOME')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const remainingSafeBalance = totalIncomeInflow - totalActualSpentOutflows;
 
   return (
     <div className="glass-card p-5 space-y-6 border-2 border-indigo-500/20 shadow-xl bg-gradient-to-br from-white via-slate-50/50 to-indigo-50/20 dark:from-slate-900 dark:via-slate-900/90 dark:to-indigo-950/20">
@@ -422,12 +417,12 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
         {/* 1. Inflows */}
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-1">
           <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-            <ArrowUpRight className="w-3.5 h-3.5" /> Total Inflows (Salary+Bal)
+            <ArrowUpRight className="w-3.5 h-3.5" /> Total Inflows (Salary+Credits)
           </span>
           <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
-            {formatINR(totalAvailableInflow)}
+            {formatINR(totalIncomeInflow)}
           </p>
-          <span className="text-[10px] text-slate-400 block">₹50,000 Salary + ₹4,713.39 Kotak</span>
+          <span className="text-[10px] text-slate-400 block">Logged income credits</span>
         </div>
 
         {/* 2. Current Month Borrowed */}
@@ -449,18 +444,18 @@ export const MonthlyRunningStatusWidget: React.FC = () => {
           <p className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400">
             {formatINR(totalActualSpentOutflows)}
           </p>
-          <span className="text-[10px] text-slate-400 block">Planned budget: {formatINR(totalPlannedOutflows)}</span>
+          <span className="text-[10px] text-slate-400 block">Across 10 running categories</span>
         </div>
 
         {/* 4. Safe Remaining Balance */}
         <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-900 to-slate-900 text-white border border-indigo-700/40 shadow-md space-y-1">
           <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1">
-            <Landmark className="w-3.5 h-3.5 text-indigo-400" /> Safe Remaining Bank Bal
+            <Landmark className="w-3.5 h-3.5 text-indigo-400" /> Safe Remaining Balance
           </span>
           <p className="text-xl sm:text-2xl font-black text-indigo-100">
             {formatINR(remainingSafeBalance)}
           </p>
-          <span className="text-[10px] text-indigo-300/80 block">Liquid buffer after spent</span>
+          <span className="text-[10px] text-indigo-300/80 block">Net surplus / buffer</span>
         </div>
       </div>
 

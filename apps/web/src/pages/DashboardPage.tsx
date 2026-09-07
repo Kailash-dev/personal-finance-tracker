@@ -7,7 +7,6 @@ import { CategoryDonutChart } from '../components/dashboard/CategoryDonutChart';
 import { GoalProgressWidget } from '../components/dashboard/GoalProgressWidget';
 import { HealthScoreWidget } from '../components/dashboard/HealthScoreWidget';
 import { CreditCardWidget } from '../components/dashboard/CreditCardWidget';
-import { SeptemberTrackerWidget } from '../components/dashboard/SeptemberTrackerWidget';
 import { MonthlyRunningStatusWidget } from '../components/dashboard/MonthlyRunningStatusWidget';
 import { QuickExpenseLoggerBar } from '../components/dashboard/QuickExpenseLoggerBar';
 import { formatINR } from '@personal-finance/shared';
@@ -101,9 +100,6 @@ export const DashboardPage: React.FC = () => {
 
       {/* Monthly Running Amount Status (Current Month Borrowed, Debts, Rent, Groceries, Lightbill, Wifi, Dairy, Outside Eating, Shopping, Subscriptions) */}
       <MonthlyRunningStatusWidget />
-
-      {/* Kailash's September Cash Flow & Safe Bank Balance Milestones */}
-      <SeptemberTrackerWidget />
 
       {/* Finance Mentor Banner */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-brand-500/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

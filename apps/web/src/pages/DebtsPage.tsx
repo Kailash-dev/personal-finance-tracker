@@ -1117,14 +1117,16 @@ export const DebtsPage: React.FC = () => {
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
                 <button
-                  onClick={async () => {
-                    await dataProvider.seedKailashFinanceData();
-                    triggerRefresh();
+                  onClick={() => {
+                    setBorrowingType('BORROWED');
+                    setPersonName('');
+                    setBAmount('');
+                    setIsAddBorrowingOpen(true);
                   }}
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold text-xs shadow-lg shadow-brand-500/25 transition-all flex items-center gap-1.5"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Load Kailash's Hand Loans & Borrowings</span>
+                  <Plus className="w-4 h-4" />
+                  <span>+ Record New Hand Loan / Borrowing</span>
                 </button>
               </div>
             </div>

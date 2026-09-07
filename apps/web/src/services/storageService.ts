@@ -51,9 +51,20 @@ class StorageService {
   private initDefaults() {
     if (typeof window === 'undefined') return;
 
-    if (!localStorage.getItem('rupeetrack_kailash_finplan_v6')) {
-      this.seedKailashFinanceData();
-      return;
+    const CLEAN_STORAGE_KEY = 'rupeetrack_unseeded_clean_v1';
+    if (!localStorage.getItem(CLEAN_STORAGE_KEY)) {
+      // Clear previously seeded mock data
+      localStorage.removeItem('rupeetrack_kailash_finplan_v6');
+      localStorage.removeItem('rupeetrack_kailash_finplan_v5');
+      localStorage.removeItem('rupeetrack_kailash_finplan_v4');
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.INCOME_STREAMS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify([]));
+      localStorage.setItem(CLEAN_STORAGE_KEY, 'true');
     }
 
     if (!localStorage.getItem(STORAGE_KEYS.ACCOUNTS)) {
@@ -76,6 +87,9 @@ class StorageService {
     }
     if (!localStorage.getItem(STORAGE_KEYS.BORROWINGS)) {
       localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify([]));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.INCOME_STREAMS)) {
+      localStorage.setItem(STORAGE_KEYS.INCOME_STREAMS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.RECURRING)) {
       localStorage.setItem(STORAGE_KEYS.RECURRING, JSON.stringify([]));
