@@ -60,14 +60,17 @@ export type GoalCategory =
   | 'CUSTOM';
 
 export type DebtType =
-  | 'HOME_LOAN'
-  | 'CAR_LOAN'
+  | 'CHIT_FUND_VC'
   | 'BIKE_LOAN'
+  | 'CAR_LOAN'
+  | 'CREDIT_CARD_MIN_PAYMENT'
+  | 'PERSONAL_BORROWING'
+  | 'HOME_LOAN'
   | 'PERSONAL_LOAN'
   | 'EDUCATION_LOAN'
-  | 'CREDIT_CARD_LOAN'
   | 'FRIENDS_FAMILY'
-  | 'OTHER';
+  | 'OTHER_OUTGOING';
+
 
 export type RecurringFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 

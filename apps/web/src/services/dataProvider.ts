@@ -119,6 +119,14 @@ export class DataProvider {
     return storageService.updateDebt(id, updates);
   }
 
+  async deleteDebt(id: string): Promise<void> {
+    storageService.deleteDebt(id);
+  }
+
+  async recordDebtPayment(debtId: string, amount: number, accountId?: string, date?: string): Promise<void> {
+    storageService.recordDebtPayment(debtId, amount, accountId, date);
+  }
+
   // --- DASHBOARD & REPORTS ---
   async getDashboardData(month?: string) {
     return storageService.getDashboardData(month);

@@ -23,7 +23,7 @@ export const navItems = [
   { to: '/import', label: 'Import Statement', icon: FileSpreadsheet, badge: 'PDF' },
   { to: '/budgets', label: 'Monthly Budgets', icon: PieChart },
   { to: '/accounts', label: 'Accounts & Cards', icon: Landmark },
-  { to: '/debts', label: 'Debts & Loans', icon: CreditCard },
+  { to: '/debts', label: 'Outgoings & EMIs', icon: CreditCard },
   { to: '/goals', label: 'Financial Goals', icon: Target },
   { to: '/reports', label: 'Reports & Insights', icon: FileBarChart },
   { to: '/settings', label: 'Settings & Export', icon: Settings },

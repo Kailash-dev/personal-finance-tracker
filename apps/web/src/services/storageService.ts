@@ -420,6 +420,42 @@ class StorageService {
     return debts[idx];
   }
 
+  deleteDebt(id: string): void {
+    let debts = this.getDebts();
+    debts = debts.filter((d) => d.id !== id);
+    localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(debts));
+  }
+
+  recordDebtPayment(debtId: string, amount: number, accountId?: string, date?: string): void {
+    const debts = this.getDebts();
+    const d = debts.find((item) => item.id === debtId);
+    if (!d) return;
+
+    // Reduce outstanding amount
+    d.outstandingAmount = Math.max(0, d.outstandingAmount - amount);
+    d.updatedAt = new Date().toISOString();
+    localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(debts));
+
+    // Log as transaction
+    const finalDate = date || new Date().toISOString().split('T')[0];
+    this.createTransaction({
+      accountId: accountId || 'acc_primary',
+      categoryId: 'cat_financial',
+      subcategoryId: d.type.toLowerCase().includes('bike')
+        ? 'sub_emi_bike'
+        : d.type.toLowerCase().includes('car')
+        ? 'sub_emi_car'
+        : d.type.toLowerCase().includes('card')
+        ? 'sub_cc_payment'
+        : 'sub_emi_personal',
+      date: finalDate,
+      description: `Monthly Payment: ${d.name} (${d.lender})`,
+      amount: -amount,
+      type: 'DEBT_PAYMENT',
+      paymentMethod: 'UPI',
+    });
+  }
+
   // --- DASHBOARD DATA AGGREGATOR ---
   getDashboardData(targetMonth?: string) {
     const month = targetMonth || new Date().toISOString().slice(0, 7);
