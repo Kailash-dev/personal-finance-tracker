@@ -93,6 +93,34 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Finance Mentor Banner */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-brand-500/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+            <span className="text-xl">🤖</span>
+          </div>
+          <div>
+            <h4 className="font-extrabold text-sm flex items-center gap-1.5">
+              <span>Finance Mentor Advice Active</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 uppercase tracking-wider font-bold">
+                Smart Indian Rules
+              </span>
+            </h4>
+            <p className="text-xs text-indigo-100 mt-0.5">
+              Plan custom category budgets for rent & groceries, track daily UPI leaks, and ask financial guidance.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          to="/mentor"
+          className="px-4 py-2 rounded-xl bg-white text-brand-700 hover:bg-indigo-50 font-extrabold text-xs shadow-sm transition-all self-start sm:self-auto shrink-0 flex items-center gap-1.5"
+        >
+          <span>Open Finance Mentor</span>
+          <ArrowUpRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
+
       {/* Row 1: Primary Metrics Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <OverviewCard

@@ -14,6 +14,7 @@ import { DebtsPage } from './pages/DebtsPage';
 import { GoalsPage } from './pages/GoalsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { MentorPage } from './pages/MentorPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isOnboarded } = useAuth();
@@ -49,6 +50,7 @@ export const App: React.FC = () => {
               }
             >
               <Route index element={<DashboardPage />} />
+              <Route path="mentor" element={<MentorPage />} />
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="import" element={<ImportPage />} />
               <Route path="budgets" element={<BudgetsPage />} />

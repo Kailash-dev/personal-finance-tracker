@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { dataProvider } from '../services/dataProvider';
 import { Budget } from '@personal-finance/types';
-import { formatINR } from '@personal-finance/shared';
+import { formatINR, calculateRecommendedBudget } from '@personal-finance/shared';
 import {
   PieChart,
   AlertTriangle,
@@ -11,10 +11,14 @@ import {
   Plus,
   ArrowRight,
   TrendingUp,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import confetti from 'canvas-confetti';
 
 export const BudgetsPage: React.FC = () => {
-  const { selectedMonth, categories, refreshTrigger, triggerRefresh } = useFinance();
+  const { user, selectedMonth, categories, refreshTrigger, triggerRefresh } = useFinance();
   const [budget, setBudget] = useState<Budget | null>(null);
   const [spentMap, setSpentMap] = useState<Record<string, number>>({});
   const [isEditing, setIsEditing] = useState(false);
@@ -43,15 +47,23 @@ export const BudgetsPage: React.FC = () => {
         b.items.forEach((item) => {
           limits[item.categoryId] = item.amount;
         });
-      } else {
-        categories.slice(0, 6).forEach((c) => {
-          limits[c.id] = 10000;
-        });
       }
       setBudgetLimits(limits);
     };
     loadBudgetData();
   }, [selectedMonth, refreshTrigger]);
+
+  const handleApplyMentorPlan = () => {
+    const income = user?.monthlyIncome || 50000;
+    const plan = calculateRecommendedBudget(income, 'BALANCED_50_30_20');
+    const newLimits: Record<string, number> = {};
+    plan.categories.forEach((c) => {
+      newLimits[c.categoryId] = c.recommendedAmount;
+    });
+    setBudgetLimits(newLimits);
+    setIsEditing(true);
+    confetti({ particleCount: 50, spread: 60 });
+  };
 
   const handleSaveBudget = async () => {
     setIsSaving(true);
@@ -89,7 +101,16 @@ export const BudgetsPage: React.FC = () => {
           </p>
         </div>
 
-        <div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleApplyMentorPlan}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-50 dark:bg-brand-950/60 hover:bg-brand-100 text-brand-700 dark:text-brand-300 font-bold text-xs border border-brand-500/20 shadow-sm transition-colors"
+          >
+            <Sparkles className="w-4 h-4 text-brand-500" />
+            <span>Auto-Plan with Mentor</span>
+          </button>
+
           {isEditing ? (
             <button
               onClick={handleSaveBudget}

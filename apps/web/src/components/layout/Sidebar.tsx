@@ -11,11 +11,14 @@ import {
   FileBarChart,
   Settings,
   Sparkles,
+  Bot,
+  Compass,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/mentor', label: 'Finance Mentor', icon: Sparkles, badge: 'AI' },
   { to: '/transactions', label: 'Transactions', icon: ReceiptText },
   { to: '/import', label: 'Import Statement', icon: FileSpreadsheet, badge: 'PDF' },
   { to: '/budgets', label: 'Monthly Budgets', icon: PieChart },
