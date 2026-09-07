@@ -632,34 +632,34 @@ export const DebtsPage: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                 <button
                   type="button"
-                  onClick={() => openPresetModal('PERSONAL_LOAN', 'Ram Fincorp Small Borrowing', 'Ram Fincorp', '16650')}
-                  className="flex items-center gap-1.5 p-2 rounded-xl border border-orange-500/30 bg-orange-50/60 dark:bg-orange-950/30 hover:bg-orange-100/60 text-xs font-semibold text-orange-900 dark:text-orange-200 transition-colors"
-                >
-                  <Landmark className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                  <span className="truncate">+ Ram Fincorp</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => openPresetModal('BIKE_LOAN', 'Bike Loan Monthly EMI', 'Hero Fincorp / HDFC', '6250')}
+                  onClick={() => openPresetModal('BIKE_LOAN', 'Bike Loan Monthly EMI', 'Hero Fincorp / HDFC', '6250', 36, 30)}
                   className="flex items-center gap-1.5 p-2 rounded-xl border border-rose-500/30 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100/60 text-xs font-semibold text-rose-900 dark:text-rose-200 transition-colors"
                 >
                   <Bike className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                  <span className="truncate">+ Bike EMI</span>
+                  <span className="truncate">+ Bike EMI (36m)</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => openPresetModal('PERSONAL_LOAN', 'Bajaj Finserv Mobile EMI', 'Bajaj Finance', '3800')}
+                  onClick={() => openPresetModal('PERSONAL_LOAN', 'Mobile Phone EMI (Bajaj Finserv)', 'Bajaj Finance', '3800', 24, 1)}
                   className="flex items-center gap-1.5 p-2 rounded-xl border border-blue-500/30 bg-blue-50/60 dark:bg-blue-950/30 hover:bg-blue-100/60 text-xs font-semibold text-blue-900 dark:text-blue-200 transition-colors"
                 >
                   <CreditCard className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  <span className="truncate">+ Mobile EMI</span>
+                  <span className="truncate">+ Mobile EMI (24m)</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => openPresetModal('CHIT_FUND_VC', 'Chit Fund (VC 2) EMI', 'Chit Committee', '4500')}
+                  onClick={() => openPresetModal('PERSONAL_BORROWING', 'Money Borrowed on Interest', 'Private Lender', '2000', 12, 0)}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/60 text-xs font-semibold text-emerald-900 dark:text-emerald-200 transition-colors"
+                >
+                  <HandCoins className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="truncate">+ Borrowed on Interest</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('CHIT_FUND_VC', 'Chit Fund (VC 2) EMI', 'Chit Committee', '4500', 11, 6)}
                   className="flex items-center gap-1.5 p-2 rounded-xl border border-amber-600/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
                 >
                   <Coins className="w-3.5 h-3.5 text-amber-600 shrink-0" />
@@ -668,7 +668,7 @@ export const DebtsPage: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'SBI Credit Card Minimum Due', 'SBI Cards', '12108')}
+                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'SBI Credit Card Minimum Due', 'SBI Cards', '12108', 4, 1)}
                   className="flex items-center gap-1.5 p-2 rounded-xl border border-purple-500/30 bg-purple-50/60 dark:bg-purple-950/30 hover:bg-purple-100/60 text-xs font-semibold text-purple-900 dark:text-purple-200 transition-colors"
                 >
                   <CreditCard className="w-3.5 h-3.5 text-purple-500 shrink-0" />
@@ -677,10 +677,10 @@ export const DebtsPage: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'Axis CC Final Settlement', 'Axis Bank', '1400')}
-                  className="flex items-center gap-1.5 p-2 rounded-xl border border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/60 text-xs font-semibold text-emerald-900 dark:text-emerald-200 transition-colors"
+                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'Axis CC Final Settlement', 'Axis Bank', '1400', 3, 2)}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-teal-500/30 bg-teal-50/60 dark:bg-teal-950/30 hover:bg-teal-100/60 text-xs font-semibold text-teal-900 dark:text-teal-200 transition-colors"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-teal-500 shrink-0" />
                   <span className="truncate">+ Axis Settlement</span>
                 </button>
               </div>

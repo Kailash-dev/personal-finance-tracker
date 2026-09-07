@@ -51,20 +51,70 @@ class StorageService {
   private initDefaults() {
     if (typeof window === 'undefined') return;
 
-    const CLEAN_STORAGE_KEY = 'rupeetrack_unseeded_clean_v1';
-    if (!localStorage.getItem(CLEAN_STORAGE_KEY)) {
-      // Clear previously seeded mock data
-      localStorage.removeItem('rupeetrack_kailash_finplan_v6');
-      localStorage.removeItem('rupeetrack_kailash_finplan_v5');
-      localStorage.removeItem('rupeetrack_kailash_finplan_v4');
-      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.INCOME_STREAMS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify([]));
-      localStorage.setItem(CLEAN_STORAGE_KEY, 'true');
+    const EXACT_USER_DEBTS: Debt[] = [
+      {
+        id: 'debt_bike_loan',
+        userId: 'user_kailash',
+        name: 'Bike Loan Monthly EMI',
+        lender: 'Hero Fincorp / HDFC',
+        type: 'BIKE_LOAN',
+        originalAmount: 225000,
+        outstandingAmount: 37500,
+        monthlyEmi: 6250,
+        interestRate: 11.5,
+        totalTenureMonths: 36,
+        emisPaid: 30,
+        emisRemaining: 6,
+        startDate: '2024-01-10',
+        dueDay: 10,
+        notes: 'Financed in Jan 2024 (36m tenure, 30 paid, only 6 EMIs left of ₹6,250)',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_mobile_emi',
+        userId: 'user_kailash',
+        name: 'Mobile Phone EMI (Bajaj Finserv)',
+        lender: 'Bajaj Finance',
+        type: 'PERSONAL_LOAN',
+        originalAmount: 91200,
+        outstandingAmount: 87400,
+        monthlyEmi: 3800,
+        interestRate: 0,
+        totalTenureMonths: 24,
+        emisPaid: 1,
+        emisRemaining: 23,
+        startDate: '2026-08-12',
+        dueDay: 12,
+        notes: '24-month tenure (1 paid, 23 EMIs left of ₹3,800)',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_borrowed_interest',
+        userId: 'user_kailash',
+        name: 'Money Borrowed on Interest',
+        lender: 'Private Lender / Hand Loan',
+        type: 'PERSONAL_BORROWING',
+        originalAmount: 50000,
+        outstandingAmount: 50000,
+        monthlyEmi: 2000,
+        interestRate: 24,
+        totalTenureMonths: 12,
+        emisPaid: 0,
+        emisRemaining: 12,
+        startDate: '2026-09-01',
+        dueDay: 10,
+        notes: 'Hand loan borrowed on interest (Monthly interest payout)',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ];
+
+    const USER_CONFIG_KEY = 'rupeetrack_user_exact_debts_v8';
+    if (!localStorage.getItem(USER_CONFIG_KEY)) {
+      localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(EXACT_USER_DEBTS));
+      localStorage.setItem(USER_CONFIG_KEY, 'true');
     }
 
     if (!localStorage.getItem(STORAGE_KEYS.ACCOUNTS)) {
@@ -83,7 +133,7 @@ class StorageService {
       localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.DEBTS)) {
-      localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(EXACT_USER_DEBTS));
     }
     if (!localStorage.getItem(STORAGE_KEYS.BORROWINGS)) {
       localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify([]));
