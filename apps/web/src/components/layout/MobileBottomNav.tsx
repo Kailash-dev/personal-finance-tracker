@@ -65,7 +65,7 @@ export const MobileBottomNav: React.FC = () => {
                 className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 text-xs font-medium text-slate-700 dark:text-slate-300"
               >
                 <CreditCard className="w-5 h-5 text-rose-500" />
-                <span>Outgoings & EMIs</span>
+                <span>Debts & Loans</span>
               </NavLink>
               <NavLink
                 to="/reports"

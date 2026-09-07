@@ -18,12 +18,12 @@ import { clsx } from 'clsx';
 
 export const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/mentor', label: 'Finance Mentor', icon: Sparkles, badge: 'AI' },
+  { to: '/debts', label: 'Debt & Loan Tracker', icon: CreditCard, badge: 'DEBTS' },
   { to: '/transactions', label: 'Transactions', icon: ReceiptText },
+  { to: '/mentor', label: 'Finance Mentor', icon: Sparkles, badge: 'AI' },
   { to: '/import', label: 'Import Statement', icon: FileSpreadsheet, badge: 'PDF' },
   { to: '/budgets', label: 'Monthly Budgets', icon: PieChart },
   { to: '/accounts', label: 'Accounts & Cards', icon: Landmark },
-  { to: '/debts', label: 'Outgoings & EMIs', icon: CreditCard },
   { to: '/goals', label: 'Financial Goals', icon: Target },
   { to: '/reports', label: 'Reports & Insights', icon: FileBarChart },
   { to: '/settings', label: 'Settings & Export', icon: Settings },
