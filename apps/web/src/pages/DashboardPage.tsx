@@ -88,7 +88,7 @@ export const DashboardPage: React.FC = () => {
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-md shadow-brand-500/25 transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Expense</span>
+            <span>Log Spend / Income</span>
           </button>
         </div>
       </div>
@@ -216,22 +216,24 @@ export const DashboardPage: React.FC = () => {
               <Receipt className="w-6 h-6" />
             </div>
             <div>
-              <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">No Transactions Recorded This Month</p>
-              <p className="text-xs text-slate-400 mt-0.5">Import your bank PDF statement or record your first expense</p>
+              <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">No Transactions Recorded for {data.month}</p>
+              <p className="text-xs text-slate-400 mt-0.5">Start logging your September expenses or import your bank PDF statement to calculate your total spend automatically.</p>
             </div>
-            <div className="pt-1 flex items-center justify-center gap-2">
-              <Link
-                to="/import"
-                className="px-3.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-sm transition-colors"
-              >
-                Import Statement
-              </Link>
+            <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
               <button
                 onClick={() => setIsQuickModalOpen(true)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors"
+                className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs shadow-md shadow-brand-500/20 transition-all flex items-center gap-1.5"
               >
-                Add Manual Expense
+                <Plus className="w-4 h-4" />
+                <span>+ Log Spend / Expense</span>
               </button>
+              <Link
+                to="/import"
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-semibold text-xs border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-1.5"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-brand-500" />
+                <span>Import Statement</span>
+              </Link>
             </div>
           </div>
         ) : (

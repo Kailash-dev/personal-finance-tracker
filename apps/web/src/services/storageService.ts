@@ -198,10 +198,28 @@ class StorageService {
       finalType = finalType || catRes.type;
     }
 
+    // Ensure account exists
+    let accounts = this.getAccounts();
+    if (accounts.length === 0) {
+      const defaultAcc = this.createAccount({
+        userId: user.id,
+        name: 'Primary Bank Account',
+        type: 'SAVINGS',
+        bank: 'HDFC',
+        accountNumberMasked: '•••• 1234',
+        currentBalance: 0,
+        openingBalance: 0,
+        currency: 'INR',
+        isActive: true,
+      });
+      txData.accountId = defaultAcc.id;
+      accounts = this.getAccounts();
+    }
+
     const newTx: Transaction = {
       id: `tx_${Date.now()}`,
       userId: user.id,
-      accountId: txData.accountId,
+      accountId: txData.accountId || accounts[0]?.id || 'acc_primary',
       toAccountId: txData.toAccountId,
       categoryId: finalCategoryId || 'cat_misc',
       subcategoryId: finalSubcategoryId,
@@ -222,10 +240,9 @@ class StorageService {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txns));
 
     // Update account balance
-    const accounts = this.getAccounts();
-    const accIdx = accounts.findIndex((a) => a.id === txData.accountId);
+    const accIdx = accounts.findIndex((a) => a.id === newTx.accountId);
     if (accIdx !== -1) {
-      accounts[accIdx].currentBalance += txData.amount;
+      accounts[accIdx].currentBalance += newTx.amount;
       if (accounts[accIdx].type === 'CREDIT_CARD' && accounts[accIdx].creditLimit) {
         accounts[accIdx].availableLimit = (accounts[accIdx].creditLimit || 0) + accounts[accIdx].currentBalance;
       }

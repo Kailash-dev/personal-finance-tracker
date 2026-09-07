@@ -279,3 +279,13 @@ export const QUICK_CATEGORY_CHIPS = [
   { id: 'cat_investment:sub_sip', name: 'SIP', icon: '📈' },
   { id: 'cat_misc:sub_misc_other', name: 'Other', icon: '💰' },
 ];
+
+export const QUICK_INCOME_CHIPS = [
+  { id: 'cat_income:sub_salary', name: 'Salary', icon: '💼' },
+  { id: 'cat_income:sub_freelance', name: 'Freelance', icon: '💻' },
+  { id: 'cat_income:sub_dividend', name: 'Investments', icon: '📈' },
+  { id: 'cat_income:sub_rental_income', name: 'Rent Received', icon: '🏠' },
+  { id: 'cat_income:sub_cashback', name: 'Bonus/Cashback', icon: '🎁' },
+  { id: 'cat_income:sub_other_income', name: 'Other Income', icon: '💵' },
+];
+

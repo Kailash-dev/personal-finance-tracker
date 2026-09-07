@@ -93,7 +93,7 @@ export const Navbar: React.FC = () => {
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-medium text-sm shadow-md shadow-brand-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
         >
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add Expense</span>
+          <span className="hidden sm:inline">Log Spend / Income</span>
         </button>
 
         {/* Theme Toggle */}
