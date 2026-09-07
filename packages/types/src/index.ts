@@ -214,6 +214,26 @@ export interface Debt {
   updatedAt: string;
 }
 
+export type BorrowingType = 'BORROWED' | 'LENT';
+export type BorrowingStatus = 'PENDING' | 'PARTIALLY_PAID' | 'SETTLED';
+
+export interface Borrowing {
+  id: string;
+  userId: string;
+  type: BorrowingType; // BORROWED (I owe money) vs LENT (Money owed to me)
+  personName: string;
+  amount: number;
+  amountSettled: number;
+  borrowDate: string; // YYYY-MM-DD
+  dueDate?: string; // YYYY-MM-DD
+  status: BorrowingStatus;
+  purpose?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+
 export interface RecurringTransaction {
   id: string;
   userId: string;

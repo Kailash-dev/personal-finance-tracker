@@ -9,6 +9,7 @@ import {
   MerchantRule,
   RecurringTransaction,
   BankImport,
+  Borrowing,
 } from '@personal-finance/types';
 import {
   DEFAULT_CATEGORIES,
@@ -30,6 +31,7 @@ const STORAGE_KEYS = {
   BUDGETS: 'rupeetrack_budgets',
   GOALS: 'rupeetrack_goals',
   DEBTS: 'rupeetrack_debts',
+  BORROWINGS: 'rupeetrack_borrowings',
   RECURRING: 'rupeetrack_recurring',
   RULES: 'rupeetrack_rules',
   IMPORTS: 'rupeetrack_imports',
@@ -61,6 +63,9 @@ class StorageService {
     }
     if (!localStorage.getItem(STORAGE_KEYS.DEBTS)) {
       localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify([]));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.BORROWINGS)) {
+      localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify([]));
     }
     if (!localStorage.getItem(STORAGE_KEYS.RECURRING)) {
       localStorage.setItem(STORAGE_KEYS.RECURRING, JSON.stringify([]));
@@ -454,6 +459,94 @@ class StorageService {
       type: 'DEBT_PAYMENT',
       paymentMethod: 'UPI',
     });
+  }
+
+  // --- SHORT-TERM BORROWINGS & HAND LOANS (उधार) ---
+  getBorrowings(month?: string): Borrowing[] {
+    const raw = localStorage.getItem(STORAGE_KEYS.BORROWINGS);
+    let list: Borrowing[] = raw ? JSON.parse(raw) : [];
+    if (month) {
+      list = list.filter((b) => b.borrowDate.startsWith(month) || (b.dueDate && b.dueDate.startsWith(month)) || b.status !== 'SETTLED');
+    }
+    return list.sort((a, b) => b.borrowDate.localeCompare(a.borrowDate));
+  }
+
+  createBorrowing(borrowing: Omit<Borrowing, 'id' | 'createdAt' | 'updatedAt' | 'amountSettled' | 'status'> & { recordCashFlow?: boolean; accountId?: string }): Borrowing {
+    const list = this.getBorrowings();
+    const newBorrowing: Borrowing = {
+      ...borrowing,
+      id: `bor_${Date.now()}`,
+      amountSettled: 0,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    list.unshift(newBorrowing);
+    localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify(list));
+
+    // Optional: Log instant cashflow transaction
+    if (borrowing.recordCashFlow) {
+      this.createTransaction({
+        accountId: borrowing.accountId || 'acc_primary',
+        categoryId: 'cat_transfer',
+        subcategoryId: 'sub_friend_transfer',
+        date: borrowing.borrowDate,
+        description: borrowing.type === 'BORROWED'
+          ? `Hand Loan Received: ${borrowing.personName} (${borrowing.purpose || 'Borrowing'})`
+          : `Hand Loan Given: ${borrowing.personName} (${borrowing.purpose || 'Lending'})`,
+        amount: borrowing.type === 'BORROWED' ? borrowing.amount : -borrowing.amount,
+        type: borrowing.type === 'BORROWED' ? 'INCOME' : 'EXPENSE',
+        paymentMethod: 'UPI',
+      });
+    }
+
+    return newBorrowing;
+  }
+
+  updateBorrowing(id: string, updates: Partial<Borrowing>): Borrowing {
+    const list = this.getBorrowings();
+    const idx = list.findIndex((b) => b.id === id);
+    if (idx === -1) throw new Error('Borrowing record not found');
+    list[idx] = { ...list[idx], ...updates, updatedAt: new Date().toISOString() };
+    localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify(list));
+    return list[idx];
+  }
+
+  deleteBorrowing(id: string): void {
+    let list = this.getBorrowings();
+    list = list.filter((b) => b.id !== id);
+    localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify(list));
+  }
+
+  settleBorrowing(id: string, settleAmount: number, accountId?: string, date?: string): Borrowing {
+    const list = this.getBorrowings();
+    const idx = list.findIndex((b) => b.id === id);
+    if (idx === -1) throw new Error('Borrowing record not found');
+
+    const b = list[idx];
+    const newSettled = Math.min(b.amount, b.amountSettled + settleAmount);
+    b.amountSettled = newSettled;
+    b.status = newSettled >= b.amount ? 'SETTLED' : 'PARTIALLY_PAID';
+    b.updatedAt = new Date().toISOString();
+
+    localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify(list));
+
+    // Log settlement transaction
+    const finalDate = date || new Date().toISOString().split('T')[0];
+    this.createTransaction({
+      accountId: accountId || 'acc_primary',
+      categoryId: 'cat_transfer',
+      subcategoryId: 'sub_friend_transfer',
+      date: finalDate,
+      description: b.type === 'BORROWED'
+        ? `Repaid Hand Loan: ${b.personName}`
+        : `Collected Hand Loan: ${b.personName}`,
+      amount: b.type === 'BORROWED' ? -settleAmount : settleAmount,
+      type: b.type === 'BORROWED' ? 'EXPENSE' : 'INCOME',
+      paymentMethod: 'UPI',
+    });
+
+    return b;
   }
 
   // --- DASHBOARD DATA AGGREGATOR ---

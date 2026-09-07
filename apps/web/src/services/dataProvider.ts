@@ -127,6 +127,27 @@ export class DataProvider {
     storageService.recordDebtPayment(debtId, amount, accountId, date);
   }
 
+  // --- BORROWINGS (उधार) ---
+  async getBorrowings(month?: string) {
+    return storageService.getBorrowings(month);
+  }
+
+  async createBorrowing(data: any) {
+    return storageService.createBorrowing(data);
+  }
+
+  async updateBorrowing(id: string, updates: any) {
+    return storageService.updateBorrowing(id, updates);
+  }
+
+  async deleteBorrowing(id: string) {
+    storageService.deleteBorrowing(id);
+  }
+
+  async settleBorrowing(id: string, amount: number, accountId?: string, date?: string) {
+    return storageService.settleBorrowing(id, amount, accountId, date);
+  }
+
   // --- DASHBOARD & REPORTS ---
   async getDashboardData(month?: string) {
     return storageService.getDashboardData(month);
