@@ -181,7 +181,7 @@ export const DebtsPage: React.FC = () => {
   // 2. HAND_BORROWINGS (Current month short-term borrowings & 1-click carry-forward/rollover)
   // 3. CIBIL_SCORE (CIBIL score improvement, Credit Utilization <30%, Axis NOC tracker, Auto-debit safety)
   const [activeTab, setActiveTab] = useState<'ALL_DEBTS' | 'HAND_BORROWINGS' | 'CIBIL_SCORE'>('ALL_DEBTS');
-  const [debtFilter, setDebtFilter] = useState<'ALL' | 'LOANS' | 'VEHICLE_EMIS' | 'CARDS' | 'CHITS' | 'HAND_LOANS'>('ALL');
+  const [debtFilter, setDebtFilter] = useState<'ALL' | 'LOANS' | 'VEHICLE_EMIS' | 'CARDS' | 'CHITS' | 'HAND_LOANS' | 'BNPL_NBFC'>('ALL');
 
   // Debts / Outgoings State
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -684,6 +684,8 @@ export const DebtsPage: React.FC = () => {
       'PERSONAL_BORROWING',
       'EDUCATION_LOAN',
       'OTHER_OUTGOING',
+      'BNPL',
+      'NBFC_LOAN',
     ].includes(d.type)
   );
 
@@ -722,6 +724,7 @@ export const DebtsPage: React.FC = () => {
     if (debtFilter === 'CARDS') return d.type === 'CREDIT_CARD_MIN_PAYMENT';
     if (debtFilter === 'CHITS') return d.type === 'CHIT_FUND_VC';
     if (debtFilter === 'HAND_LOANS') return d.type === 'PERSONAL_BORROWING';
+    if (debtFilter === 'BNPL_NBFC') return d.type === 'BNPL' || d.type === 'NBFC_LOAN';
     return true;
   });
 
@@ -1050,6 +1053,17 @@ export const DebtsPage: React.FC = () => {
                 }`}
               >
                 🪙 Chit Funds / VC
+              </button>
+              <button
+                type="button"
+                onClick={() => setDebtFilter('BNPL_NBFC')}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  debtFilter === 'BNPL_NBFC'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                📲 BNPL & NBFCs
               </button>
               <button
                 type="button"
