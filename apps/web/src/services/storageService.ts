@@ -261,6 +261,91 @@ class StorageService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
+      {
+        id: 'debt_sbi_card',
+        userId: 'user_kailash',
+        name: 'SBI Credit Card Minimum Due',
+        lender: 'SBI Card',
+        type: 'CREDIT_CARD_MIN_PAYMENT',
+        originalAmount: 45000,
+        outstandingAmount: 38000,
+        monthlyEmi: 12108,
+        interestRate: 42.0,
+        totalTenureMonths: 4,
+        emisPaid: 1,
+        emisRemaining: 3,
+        startDate: '2025-01-01',
+        dueDay: 28,
+        notes: 'SBI Credit Card minimum due for September (Due 28th)',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_axis_settlement',
+        userId: 'user_kailash',
+        name: 'Axis Bank CC Settlement (Final 3 of 3)',
+        lender: 'Axis Bank Collections',
+        type: 'CREDIT_CARD_MIN_PAYMENT',
+        originalAmount: 4200,
+        outstandingAmount: 1400,
+        monthlyEmi: 1400,
+        interestRate: 0,
+        totalTenureMonths: 3,
+        emisPaid: 2,
+        emisRemaining: 1,
+        startDate: '2026-07-15',
+        dueDay: 15,
+        notes: '3 installments of ₹1,400: 2 paid! 1 remaining in Sept to close card forever!',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ];
+
+    const EXACT_USER_ACCOUNTS: Account[] = [
+      {
+        id: 'acc_salary',
+        userId: 'user_kailash',
+        name: 'Kotak Mahindra Salary A/c',
+        type: 'SAVINGS',
+        bank: 'KOTAK',
+        accountNumberMasked: '•••• 9318',
+        currentBalance: 515.52,
+        openingBalance: 38.10,
+        currency: 'INR',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'acc_cash',
+        userId: 'user_kailash',
+        name: 'Cash in Hand / Wallet',
+        type: 'CASH',
+        bank: 'OTHER',
+        accountNumberMasked: 'Cash',
+        currentBalance: 500,
+        openingBalance: 500,
+        currency: 'INR',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'acc_sbi_card',
+        userId: 'user_kailash',
+        name: 'SBI Credit Card',
+        type: 'CREDIT_CARD',
+        bank: 'SBI',
+        accountNumberMasked: '•••• 7120',
+        currentBalance: -38000,
+        openingBalance: -38000,
+        creditLimit: 50000,
+        dueDate: 28,
+        currency: 'INR',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     ];
 
     const EXACT_USER_BORROWINGS: Borrowing[] = [
@@ -327,9 +412,28 @@ class StorageService {
       },
     ];
 
-    const USER_CONFIG_KEY = 'rupeetrack_user_exact_debts_v14';
+    const USER_CONFIG_KEY = 'rupeetrack_user_exact_debts_v15';
     if (!localStorage.getItem(USER_CONFIG_KEY)) {
-      // Merge debts without dropping any existing entries
+      // Merge accounts
+      const existingAccountsRaw = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
+      let currentAccounts: Account[] = [];
+      try {
+        if (existingAccountsRaw) currentAccounts = JSON.parse(existingAccountsRaw);
+      } catch (e) {
+        currentAccounts = [];
+      }
+      const mergedAccounts = [...currentAccounts];
+      for (const acc of EXACT_USER_ACCOUNTS) {
+        const idx = mergedAccounts.findIndex((a) => a.id === acc.id || a.name.toLowerCase() === acc.name.toLowerCase());
+        if (idx >= 0) {
+          mergedAccounts[idx] = { ...acc, ...mergedAccounts[idx] };
+        } else {
+          mergedAccounts.push(acc);
+        }
+      }
+      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(mergedAccounts));
+
+      // Merge debts without dropping any existing entries (SBI Card, Axis, Father's card, etc.)
       const existingDebtsRaw = localStorage.getItem(STORAGE_KEYS.DEBTS);
       let currentDebts: Debt[] = [];
       try {
@@ -374,7 +478,7 @@ class StorageService {
     }
 
     if (!localStorage.getItem(STORAGE_KEYS.ACCOUNTS)) {
-      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(EXACT_USER_ACCOUNTS));
     }
     if (!localStorage.getItem(STORAGE_KEYS.TRANSACTIONS)) {
       localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify([]));
