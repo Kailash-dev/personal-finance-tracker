@@ -3543,6 +3543,57 @@ class StorageService {
     return newTx;
   }
 
+  updateTransaction(id: string, updates: Partial<Transaction>): Transaction {
+    let txns: Transaction[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+    const idx = txns.findIndex((t) => t.id === id);
+    if (idx === -1) throw new Error('Transaction not found');
+
+    const oldTx = txns[idx];
+    const newTx: Transaction = {
+      ...oldTx,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // If amount or account changed, adjust account balances
+    const accounts = this.getAccounts();
+    if (updates.amount !== undefined && updates.amount !== oldTx.amount) {
+      const accIdx = accounts.findIndex((a) => a.id === (updates.accountId || oldTx.accountId));
+      if (accIdx !== -1) {
+        // Revert old amount, apply new amount
+        accounts[accIdx].currentBalance = accounts[accIdx].currentBalance - oldTx.amount + updates.amount;
+      }
+    } else if (updates.accountId && updates.accountId !== oldTx.accountId) {
+      const oldAccIdx = accounts.findIndex((a) => a.id === oldTx.accountId);
+      const newAccIdx = accounts.findIndex((a) => a.id === updates.accountId);
+      if (oldAccIdx !== -1) accounts[oldAccIdx].currentBalance -= oldTx.amount;
+      if (newAccIdx !== -1) accounts[newAccIdx].currentBalance += oldTx.amount;
+    }
+
+    txns[idx] = newTx;
+    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txns));
+    localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
+    return newTx;
+  }
+
+  batchUpdateTransactions(ids: string[], updates: Partial<Transaction>): Transaction[] {
+    let txns: Transaction[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+    const idSet = new Set(ids);
+    const updatedList: Transaction[] = [];
+
+    txns = txns.map((t) => {
+      if (idSet.has(t.id)) {
+        const updated = { ...t, ...updates, updatedAt: new Date().toISOString() };
+        updatedList.push(updated);
+        return updated;
+      }
+      return t;
+    });
+
+    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txns));
+    return updatedList;
+  }
+
   deleteTransaction(id: string): void {
     let txns: Transaction[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
     const tx = txns.find((t) => t.id === id);
@@ -3560,10 +3611,63 @@ class StorageService {
     }
   }
 
+  autoCategorizeTransactions(onlyUncategorized: boolean = false): { updatedCount: number; matchedCount: number } {
+    let txns: Transaction[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+    const rules = this.getRules();
+    let updatedCount = 0;
+
+    txns = txns.map((t) => {
+      const isUncategorized = !t.categoryId || t.categoryId === 'cat_misc' || t.categoryId === '';
+      if (onlyUncategorized && !isUncategorized) {
+        return t;
+      }
+
+      const res = categorizeTransaction(t.description, t.amount, rules as any);
+      if (res && res.categoryId && (res.categoryId !== 'cat_misc' || !t.categoryId)) {
+        if (t.categoryId !== res.categoryId || t.merchantName !== res.merchantName) {
+          updatedCount++;
+          return {
+            ...t,
+            categoryId: res.categoryId,
+            subcategoryId: res.subcategoryId || t.subcategoryId,
+            merchantName: res.merchantName || t.merchantName,
+            type: t.type || res.type,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+      }
+      return t;
+    });
+
+    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(txns));
+    return { updatedCount, matchedCount: txns.length };
+  }
+
   // --- CATEGORIES & RULES ---
   getCategories(): Category[] {
     const raw = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
     return raw ? JSON.parse(raw) : DEFAULT_CATEGORIES;
+  }
+
+  createCategory(category: Omit<Category, 'id'>): Category {
+    const categories = this.getCategories();
+    const newCat: Category = {
+      ...category,
+      id: `cat_custom_${Date.now()}`,
+      subcategories: category.subcategories || [],
+    };
+    categories.push(newCat);
+    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
+    return newCat;
+  }
+
+  updateCategory(id: string, updates: Partial<Category>): Category {
+    const categories = this.getCategories();
+    const idx = categories.findIndex((c) => c.id === id);
+    if (idx === -1) throw new Error('Category not found');
+    categories[idx] = { ...categories[idx], ...updates };
+    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
+    return categories[idx];
   }
 
   getRules(): MerchantRule[] {

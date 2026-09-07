@@ -206,17 +206,17 @@ export const DEFAULT_MERCHANT_RULES: Omit<MerchantRule, 'id' | 'userId' | 'creat
   { pattern: 'ZOMATO', merchantName: 'Zomato', categoryId: 'cat_food', subcategoryId: 'sub_delivery', confidenceScore: 0.98 },
   { pattern: 'SWIGGY', merchantName: 'Swiggy', categoryId: 'cat_food', subcategoryId: 'sub_delivery', confidenceScore: 0.98 },
   { pattern: 'DOMINOS', merchantName: "Domino's Pizza", categoryId: 'cat_food', subcategoryId: 'sub_delivery', confidenceScore: 0.95 },
-  { pattern: 'MCDONALDS|MC DONALDS', merchantName: "McDonald's", categoryId: 'cat_food', subcategoryId: 'sub_restaurants', confidenceScore: 0.95, isRegex: true },
-  { pattern: 'STARBUCKS|CHAAYOS|CHAI POINT', merchantName: 'Cafe', categoryId: 'cat_food', subcategoryId: 'sub_snacks', confidenceScore: 0.95, isRegex: true },
+  { pattern: 'MCDONALDS|MC DONALDS|BURGER KING|KFC|SUBWAY', merchantName: "Fast Food Restaurant", categoryId: 'cat_food', subcategoryId: 'sub_restaurants', confidenceScore: 0.95, isRegex: true },
+  { pattern: 'STARBUCKS|CHAAYOS|CHAI POINT|RADHE DHOKLA|DHOKLA|SWEETS|FARSHAN|BAKERY|CAFE|TEA|CHAI|RESTAURANT|HOTEL|DHABA', merchantName: 'Food & Dining', categoryId: 'cat_food', subcategoryId: 'sub_restaurants', confidenceScore: 0.95, isRegex: true },
   
-  // Groceries & Dairy
+  // Groceries & Dairy & General Store
   { pattern: 'DMART|AVENUE SUPERMARTS', merchantName: 'DMart', categoryId: 'cat_food', subcategoryId: 'sub_groceries', confidenceScore: 0.98, isRegex: true },
   { pattern: 'BLINKIT|GROFERS', merchantName: 'Blinkit', categoryId: 'cat_food', subcategoryId: 'sub_groceries', confidenceScore: 0.98, isRegex: true },
   { pattern: 'ZEPTO', merchantName: 'Zepto', categoryId: 'cat_food', subcategoryId: 'sub_groceries', confidenceScore: 0.98 },
   { pattern: 'INSTAMART', merchantName: 'Swiggy Instamart', categoryId: 'cat_food', subcategoryId: 'sub_groceries', confidenceScore: 0.98 },
   { pattern: 'BIGBASKET|SUPERMARKET', merchantName: 'BigBasket', categoryId: 'cat_food', subcategoryId: 'sub_groceries', confidenceScore: 0.95, isRegex: true },
   { pattern: 'AMUL|COUNTRY DELIGHT|MOTHER DAIRY|MILK', merchantName: 'Dairy', categoryId: 'cat_food', subcategoryId: 'sub_milk', confidenceScore: 0.95, isRegex: true },
-  { pattern: 'NATURES BASKET|RELIANCE SMART|RELIANCE FRESH', merchantName: 'Supermarket', categoryId: 'cat_food', subcategoryId: 'sub_groceries', confidenceScore: 0.95, isRegex: true },
+  { pattern: 'NATURES BASKET|RELIANCE SMART|RELIANCE FRESH|DHARMESH|GENERAL|KIRANA|PROVISION|MART', merchantName: 'Groceries / Kirana', categoryId: 'cat_food', subcategoryId: 'sub_groceries', confidenceScore: 0.95, isRegex: true },
 
   // Fuel & Auto
   { pattern: 'HPCL|HINDUSTAN PETROLEUM', merchantName: 'HP Petrol Pump', categoryId: 'cat_transport', subcategoryId: 'sub_petrol', confidenceScore: 0.98, isRegex: true },
@@ -229,36 +229,37 @@ export const DEFAULT_MERCHANT_RULES: Omit<MerchantRule, 'id' | 'userId' | 'creat
   // Shopping & eCommerce
   { pattern: 'AMAZON|AMZN', merchantName: 'Amazon', categoryId: 'cat_family', subcategoryId: 'sub_shopping', confidenceScore: 0.95, isRegex: true },
   { pattern: 'FLIPKART', merchantName: 'Flipkart', categoryId: 'cat_family', subcategoryId: 'sub_shopping', confidenceScore: 0.95 },
-  { pattern: 'MYNTRA|AJIO|NYKAA|TATA CLIQ', merchantName: 'Fashion Shopping', categoryId: 'cat_family', subcategoryId: 'sub_shopping', confidenceScore: 0.95, isRegex: true },
+  { pattern: 'MYNTRA|AJIO|NYKAA|TATA CLIQ|MEESHO', merchantName: 'Fashion Shopping', categoryId: 'cat_family', subcategoryId: 'sub_shopping', confidenceScore: 0.95, isRegex: true },
 
   // Bills & Utilities
   { pattern: 'AIRTEL|JIO|VODAFONE|VI PREPAID|VI POSTPAID', merchantName: 'Telecom', categoryId: 'cat_utilities', subcategoryId: 'sub_mobile', confidenceScore: 0.98, isRegex: true },
-  { pattern: 'BESCOM|TATA POWER|ADANI ELECTRICITY|MSEDCL|UPPCL|BSES', merchantName: 'Electricity Board', categoryId: 'cat_utilities', subcategoryId: 'sub_electricity', confidenceScore: 0.98, isRegex: true },
-  { pattern: 'ACT FIBERNET|HATHWAY|AIRTEL FIBER|JIO FIBER', merchantName: 'Broadband', categoryId: 'cat_utilities', subcategoryId: 'sub_wifi', confidenceScore: 0.98, isRegex: true },
-  { pattern: 'NETFLIX|SPOTIFY|PRIME VIDEO|HOTSTAR|DISNEY', merchantName: 'OTT Subscription', categoryId: 'cat_utilities', subcategoryId: 'sub_dth', confidenceScore: 0.98, isRegex: true },
-  { pattern: 'INDRAPRASTHA GAS|IGL|MAHANAGAR GAS|MGL|HP GAS|INDANE', merchantName: 'Gas Utility', categoryId: 'cat_utilities', subcategoryId: 'sub_water', confidenceScore: 0.98, isRegex: true },
+  { pattern: 'BESCOM|TATA POWER|ADANI ELECTRICITY|MSEDCL|UPPCL|BSES|UGVCL|MGVCL|PGVCL|DGVCL|TORRENT', merchantName: 'Electricity Board', categoryId: 'cat_utilities', subcategoryId: 'sub_electricity', confidenceScore: 0.98, isRegex: true },
+  { pattern: 'ACT FIBERNET|HATHWAY|AIRTEL FIBER|JIO FIBER|GTPL', merchantName: 'Broadband', categoryId: 'cat_utilities', subcategoryId: 'sub_wifi', confidenceScore: 0.98, isRegex: true },
+  { pattern: 'NETFLIX|SPOTIFY|PRIME VIDEO|HOTSTAR|DISNEY|YOUTUBE', merchantName: 'OTT Subscription', categoryId: 'cat_utilities', subcategoryId: 'sub_dth', confidenceScore: 0.98, isRegex: true },
+  { pattern: 'INDRAPRASTHA GAS|IGL|MAHANAGAR GAS|MGL|HP GAS|INDANE|ADANI GAS|GUJARAT GAS', merchantName: 'Gas Utility', categoryId: 'cat_utilities', subcategoryId: 'sub_water', confidenceScore: 0.98, isRegex: true },
 
   // Housing & Maintenance
   { pattern: 'RENT|MYGATE|NOBROKER|APNACOMPLEX', merchantName: 'Rent / Society', categoryId: 'cat_housing', subcategoryId: 'sub_rent', confidenceScore: 0.92, isRegex: true },
 
   // Financial, Loans & EMIs
-  { pattern: 'HDFC LOAN|BAJAJ FINANCE|BAJAJ FINSERV|TATA CAPITAL|SBI LOAN|ICICI LOAN|HOME LOAN|CAR LOAN|FULLERTON', merchantName: 'EMI Payment', categoryId: 'cat_financial', subcategoryId: 'sub_emi_car', defaultType: 'DEBT_PAYMENT', confidenceScore: 0.98, isRegex: true },
-  { pattern: 'CRED|CRED CLUB', merchantName: 'CRED CC Bill', categoryId: 'cat_financial', subcategoryId: 'sub_cc_payment', defaultType: 'TRANSFER', confidenceScore: 0.98, isRegex: true },
+  { pattern: 'RAM FINCORP|FINCORP|HDFC LOAN|BAJAJ FINANCE|BAJAJ FINSERV|TATA CAPITAL|SBI LOAN|ICICI LOAN|MUTHOOT|MANAPPURAM|HOME LOAN|CAR LOAN|FULLERTON', merchantName: 'EMI / Loan Payment', categoryId: 'cat_financial', subcategoryId: 'sub_emi_personal', defaultType: 'DEBT_PAYMENT', confidenceScore: 0.98, isRegex: true },
+  { pattern: 'SBI CARD|AXIS CARD|HDFC CARD|ICICI CARD|KOTAK CARD|CRED|CRED CLUB|PAYU/SBICARD', merchantName: 'Credit Card Bill', categoryId: 'cat_financial', subcategoryId: 'sub_cc_payment', defaultType: 'DEBT_PAYMENT', confidenceScore: 0.98, isRegex: true },
   { pattern: 'LIC|HDFC LIFE|ICICI PRUDENTIAL|MAX LIFE|STAR HEALTH|CARE HEALTH|NIVA BUPA', merchantName: 'Insurance', categoryId: 'cat_financial', subcategoryId: 'sub_insurance_life', confidenceScore: 0.95, isRegex: true },
+  { pattern: 'CHIT|VC2|BC |COMMITTEE', merchantName: 'Chit Fund Contribution', categoryId: 'cat_financial', subcategoryId: 'sub_emi_personal', defaultType: 'DEBT_PAYMENT', confidenceScore: 0.95, isRegex: true },
 
   // Investments
   { pattern: 'ZERODHA|GROWW|INDMONEY|KITE|UPSTOX|KUVERA|CAMSONLINE|KARVY|MUTUAL FUND|BSE LTD|NSE', merchantName: 'Investment / SIP', categoryId: 'cat_investment', subcategoryId: 'sub_sip', defaultType: 'INVESTMENT', confidenceScore: 0.98, isRegex: true },
 
   // Healthcare
-  { pattern: 'APOLLO|PHARMEASY|1MG|NETMEDS|MEDPLUS', merchantName: 'Pharmacy', categoryId: 'cat_healthcare', subcategoryId: 'sub_medicines', confidenceScore: 0.98, isRegex: true },
-  { pattern: 'LAL PATH|DR LAL|THYROCARE|SRL DIAGNOSTICS', merchantName: 'Diagnostics', categoryId: 'cat_healthcare', subcategoryId: 'sub_tests', confidenceScore: 0.95, isRegex: true },
+  { pattern: 'APOLLO|PHARMEASY|1MG|NETMEDS|MEDPLUS|PHARMACY|CHEMIST', merchantName: 'Pharmacy', categoryId: 'cat_healthcare', subcategoryId: 'sub_medicines', confidenceScore: 0.98, isRegex: true },
+  { pattern: 'LAL PATH|DR LAL|THYROCARE|SRL DIAGNOSTICS|CLINIC|HOSPITAL', merchantName: 'Healthcare', categoryId: 'cat_healthcare', subcategoryId: 'sub_tests', confidenceScore: 0.95, isRegex: true },
 
   // Travel
   { pattern: 'IRCTC', merchantName: 'IRCTC Railways', categoryId: 'cat_travel', subcategoryId: 'sub_train', confidenceScore: 0.98 },
   { pattern: 'MAKEMYTRIP|MMT|GOIBIBO|EASEMYTRIP|INDIGO|AIR INDIA|VISTARA', merchantName: 'Flight / Travel Booking', categoryId: 'cat_travel', subcategoryId: 'sub_flights', confidenceScore: 0.95, isRegex: true },
 
   // Salary & Income
-  { pattern: 'SALARY|SAL CR|PAYROLL|INFOSYS|TCS|WIPRO|GOOGLE|MICROSOFT|AMAZON DEV|CREDIT-SALARY', merchantName: 'Employer Salary', categoryId: 'cat_income', subcategoryId: 'sub_salary', defaultType: 'INCOME', confidenceScore: 0.98, isRegex: true },
+  { pattern: 'SALARY|SAL CR|PAYROLL|INFOSYS|TCS|WIPRO|GOOGLE|MICROSOFT|AMAZON DEV|CREDIT-SALARY|RESHMA', merchantName: 'Income / Salary / Transfer In', categoryId: 'cat_income', subcategoryId: 'sub_salary', defaultType: 'INCOME', confidenceScore: 0.98, isRegex: true },
 
   // ATM / Cash
   { pattern: 'ATM WDL|CASH WDL|ATM CASH|NFS WDL|EAW-', merchantName: 'ATM Cash Withdrawal', categoryId: 'cat_transfer', subcategoryId: 'sub_cash_withdrawal', defaultType: 'CASH_WITHDRAWAL', confidenceScore: 0.98, isRegex: true },

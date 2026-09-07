@@ -63,13 +63,33 @@ export class DataProvider {
     return storageService.createTransaction(txData);
   }
 
+  async updateTransaction(id: string, updates: Partial<Transaction>): Promise<Transaction> {
+    return storageService.updateTransaction(id, updates);
+  }
+
+  async batchUpdateTransactions(ids: string[], updates: Partial<Transaction>): Promise<Transaction[]> {
+    return storageService.batchUpdateTransactions(ids, updates);
+  }
+
   async deleteTransaction(id: string): Promise<void> {
     storageService.deleteTransaction(id);
+  }
+
+  async autoCategorizeTransactions(onlyUncategorized?: boolean): Promise<{ updatedCount: number; matchedCount: number }> {
+    return storageService.autoCategorizeTransactions(onlyUncategorized);
   }
 
   // --- CATEGORIES & RULES ---
   async getCategories(): Promise<Category[]> {
     return storageService.getCategories();
+  }
+
+  async createCategory(category: Omit<Category, 'id'>): Promise<Category> {
+    return storageService.createCategory(category);
+  }
+
+  async updateCategory(id: string, updates: Partial<Category>): Promise<Category> {
+    return storageService.updateCategory(id, updates);
   }
 
   async getRules(): Promise<MerchantRule[]> {
