@@ -265,6 +265,52 @@ class StorageService {
 
     const EXACT_USER_BORROWINGS: Borrowing[] = [
       {
+        id: 'bor_rajni_5k',
+        userId: 'user_kailash',
+        personName: 'Rajni Ji Personal Borrowing',
+        amount: 5000,
+        amountSettled: 0,
+        borrowDate: '2026-09-04',
+        dueDate: '2026-09-10',
+        type: 'BORROWED',
+        status: 'PENDING',
+        purpose: 'Personal borrowing to repay on 10th Sept (Salary Day)',
+        hasInterest: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'bor_friend_5k',
+        userId: 'user_kailash',
+        personName: 'Friend / Personal Loan',
+        amount: 5000,
+        amountSettled: 0,
+        borrowDate: '2026-09-04',
+        dueDate: '2026-09-10',
+        type: 'BORROWED',
+        status: 'PENDING',
+        purpose: 'Personal borrowing due on salary day 10th Sept',
+        hasInterest: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'bor_relocation_10k',
+        userId: 'user_kailash',
+        personName: 'City Relocation Hand Loan',
+        amount: 10000,
+        amountSettled: 0,
+        borrowDate: '2026-09-04',
+        dueDate: '2026-10-10',
+        carryForwardMonth: '2026-10',
+        type: 'BORROWED',
+        status: 'PENDING',
+        purpose: 'Shifted to new city on 4th Sept - to be paid in October',
+        hasInterest: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
         id: 'borr_nagendra_4500',
         userId: 'user_kailash',
         type: 'BORROWED',
@@ -273,6 +319,7 @@ class StorageService {
         amountSettled: 0,
         status: 'PENDING',
         borrowDate: '2026-09-01',
+        dueDate: '2026-10-10',
         purpose: 'Borrowed from friend Nagendra',
         hasInterest: false,
         createdAt: new Date().toISOString(),
@@ -280,10 +327,49 @@ class StorageService {
       },
     ];
 
-    const USER_CONFIG_KEY = 'rupeetrack_user_exact_debts_v13';
+    const USER_CONFIG_KEY = 'rupeetrack_user_exact_debts_v14';
     if (!localStorage.getItem(USER_CONFIG_KEY)) {
-      localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(EXACT_USER_DEBTS));
-      localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify(EXACT_USER_BORROWINGS));
+      // Merge debts without dropping any existing entries
+      const existingDebtsRaw = localStorage.getItem(STORAGE_KEYS.DEBTS);
+      let currentDebts: Debt[] = [];
+      try {
+        if (existingDebtsRaw) currentDebts = JSON.parse(existingDebtsRaw);
+      } catch (e) {
+        currentDebts = [];
+      }
+      
+      const mergedDebts = [...currentDebts];
+      for (const debt of EXACT_USER_DEBTS) {
+        const idx = mergedDebts.findIndex((d) => d.id === debt.id || d.name.toLowerCase() === debt.name.toLowerCase());
+        if (idx >= 0) {
+          mergedDebts[idx] = { ...debt, ...mergedDebts[idx] };
+        } else {
+          mergedDebts.push(debt);
+        }
+      }
+      localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(mergedDebts));
+
+      // Merge borrowings without dropping previous hand borrowings
+      const existingBorrowingsRaw = localStorage.getItem(STORAGE_KEYS.BORROWINGS);
+      let currentBorrowings: Borrowing[] = [];
+      try {
+        if (existingBorrowingsRaw) currentBorrowings = JSON.parse(existingBorrowingsRaw);
+      } catch (e) {
+        currentBorrowings = [];
+      }
+
+      const mergedBorrowings = [...currentBorrowings];
+      for (const borrowing of EXACT_USER_BORROWINGS) {
+        const idx = mergedBorrowings.findIndex(
+          (b) => b.id === borrowing.id || b.personName.toLowerCase() === borrowing.personName.toLowerCase()
+        );
+        if (idx >= 0) {
+          mergedBorrowings[idx] = { ...borrowing, ...mergedBorrowings[idx] };
+        } else {
+          mergedBorrowings.push(borrowing);
+        }
+      }
+      localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify(mergedBorrowings));
       localStorage.setItem(USER_CONFIG_KEY, 'true');
     }
 
