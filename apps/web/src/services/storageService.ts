@@ -243,6 +243,82 @@ class StorageService {
         updatedAt: new Date().toISOString(),
       },
       {
+        id: 'debt_vc2_10th',
+        userId: 'user_kailash',
+        name: 'Chit Fund (VC 1) 10th Installment',
+        lender: 'Local Chit Group',
+        type: 'CHIT_FUND_VC',
+        originalAmount: 50000,
+        outstandingAmount: 22500,
+        monthlyEmi: 4500,
+        interestRate: 0,
+        totalTenureMonths: 11,
+        emisPaid: 6,
+        emisRemaining: 5,
+        startDate: '2026-05-10',
+        dueDay: 10,
+        notes: 'Chit fund VC 1 monthly contribution on 10th (5 EMIs remaining)',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_vc2_25th',
+        userId: 'user_kailash',
+        name: 'Chit Fund (VC 2) 25th Installment',
+        lender: 'Local Chit Group',
+        type: 'CHIT_FUND_VC',
+        originalAmount: 100000,
+        outstandingAmount: 47500,
+        monthlyEmi: 9500,
+        interestRate: 0,
+        totalTenureMonths: 10,
+        emisPaid: 5,
+        emisRemaining: 5,
+        startDate: '2026-04-25',
+        dueDay: 25,
+        notes: 'Chit fund VC 2 second installment due on 25th Sept (5 EMIs remaining)',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_travel_emi',
+        userId: 'user_kailash',
+        name: 'Travel EMI (Ending 2nd Oct)',
+        lender: 'Consumer Travel Loan',
+        type: 'PERSONAL_LOAN',
+        originalAmount: 15000,
+        outstandingAmount: 2500,
+        monthlyEmi: 2500,
+        interestRate: 12.0,
+        totalTenureMonths: 6,
+        emisPaid: 5,
+        emisRemaining: 1,
+        startDate: '2026-04-02',
+        dueDay: 30,
+        notes: 'Travel EMI ends permanently on 2nd Oct (Last EMI remaining)!',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_personal_loan_3m',
+        userId: 'user_kailash',
+        name: 'Short-Term Personal Loan (2 of 3 Paid)',
+        lender: 'NBFC / Bank',
+        type: 'PERSONAL_LOAN',
+        originalAmount: 21000,
+        outstandingAmount: 7000,
+        monthlyEmi: 7000,
+        interestRate: 14.0,
+        totalTenureMonths: 3,
+        emisPaid: 2,
+        emisRemaining: 1,
+        startDate: '2026-07-07',
+        dueDay: 7,
+        notes: '3-month short term loan. 2 EMIs paid (today 7th Sept paid ₹7,000). Only 1 EMI left next month!',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
         id: 'debt_slice_bnpl',
         userId: 'user_kailash',
         name: 'Slice (Card / Borrow)',
@@ -412,7 +488,7 @@ class StorageService {
       },
     ];
 
-    const USER_CONFIG_KEY = 'rupeetrack_user_exact_debts_v15';
+    const USER_CONFIG_KEY = 'rupeetrack_user_exact_debts_v16';
     if (!localStorage.getItem(USER_CONFIG_KEY)) {
       // Merge accounts
       const existingAccountsRaw = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
@@ -433,7 +509,7 @@ class StorageService {
       }
       localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(mergedAccounts));
 
-      // Merge debts without dropping any existing entries (SBI Card, Axis, Father's card, etc.)
+      // Merge debts without dropping any existing entries (Chits, Cards, EMIs, BNPLs)
       const existingDebtsRaw = localStorage.getItem(STORAGE_KEYS.DEBTS);
       let currentDebts: Debt[] = [];
       try {
