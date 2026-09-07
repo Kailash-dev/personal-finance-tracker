@@ -1,0 +1,298 @@
+// Prisma schema for Indian Personal Finance & Expense Tracker
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String                 @id @default(uuid())
+  email                 String                 @unique
+  passwordHash          String?
+  name                  String
+  monthlyIncome         Float                  @default(0)
+  currency              String                 @default("INR")
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  accounts              Account[]
+  transactions          Transaction[]
+  budgets               Budget[]
+  goals                 Goal[]
+  debts                 Debt[]
+  merchantRules         MerchantRule[]
+  recurringTransactions RecurringTransaction[]
+  bankImports           BankImport[]
+  monthlySummaries      MonthlySummary[]
+}
+
+model Account {
+  id                  String        @id @default(uuid())
+  userId              String
+  name                String
+  type                String        // SAVINGS, CURRENT, SALARY, CREDIT_CARD, CASH, INVESTMENT, LOAN
+  bank                String?       // HDFC, SBI, ICICI, etc.
+  accountNumberMasked String?
+  currentBalance      Float         @default(0)
+  openingBalance      Float         @default(0)
+  currency            String        @default("INR")
+  creditLimit         Float?
+  availableLimit      Float?
+  statementDate       Int?          // 1-31
+  dueDate             Int?          // 1-31
+  isActive            Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions        Transaction[] @relation("AccountTransactions")
+  transfersReceived   Transaction[] @relation("TransferReceivedTransactions")
+  bankImports         BankImport[]
+
+  @@index([userId])
+}
+
+model Category {
+  id            String        @id
+  name          String
+  icon          String
+  color         String?
+  isEssential   Boolean       @default(false)
+  
+  subcategories Subcategory[]
+  transactions  Transaction[]
+  budgetItems   BudgetItem[]
+}
+
+model Subcategory {
+  id           String        @id
+  categoryId   String
+  name         String
+  icon         String?
+
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([categoryId])
+}
+
+model Transaction {
+  id              String       @id @default(uuid())
+  userId          String
+  accountId       String
+  toAccountId     String?      // If type == TRANSFER
+  categoryId      String
+  subcategoryId   String?
+  date            String       // YYYY-MM-DD
+  description     String
+  merchantName    String?
+  amount          Float        // Positive for income/credits, negative for expenses/debits
+  type            String       // EXPENSE, INCOME, TRANSFER, INVESTMENT, DEBT_PAYMENT, REFUND, CASH_WITHDRAWAL
+  paymentMethod   String       @default("UPI") // UPI, CREDIT_CARD, DEBIT_CARD, NET_BANKING, CASH, etc.
+  source          String       @default("MANUAL") // MANUAL, BANK_PDF, CSV, RECURRING
+  referenceNumber String?
+  balanceAfter    Float?
+  notes           String?
+  tags            String?      // Comma-separated
+  isRecurring     Boolean      @default(false)
+  importId        String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account         Account      @relation("AccountTransactions", fields: [accountId], references: [id], onDelete: Cascade)
+  toAccount       Account?     @relation("TransferReceivedTransactions", fields: [toAccountId], references: [id])
+  category        Category     @relation(fields: [categoryId], references: [id])
+  subcategory     Subcategory? @relation(fields: [subcategoryId], references: [id])
+
+  @@index([userId, date])
+  @@index([accountId])
+  @@index([categoryId])
+}
+
+model MerchantRule {
+  id              String   @id @default(uuid())
+  userId          String
+  pattern         String
+  merchantName    String
+  categoryId      String
+  subcategoryId   String?
+  defaultType     String?
+  confidenceScore Float    @default(0.95)
+  isRegex         Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Budget {
+  id          String       @id @default(uuid())
+  userId      String
+  month       String       // YYYY-MM
+  totalAmount Float
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       BudgetItem[]
+
+  @@unique([userId, month])
+}
+
+model BudgetItem {
+  id         String   @id @default(uuid())
+  budgetId   String
+  categoryId String
+  amount     Float
+
+  budget     Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@index([budgetId])
+}
+
+model Goal {
+  id                  String             @id @default(uuid())
+  userId              String
+  name                String
+  category            String             // BANK_BALANCE, EMERGENCY_FUND, VEHICLE_CAR, VEHICLE_BIKE, HOUSE_PURCHASE, etc.
+  targetAmount        Float
+  currentAmount       Float              @default(0)
+  targetDate          String?            // YYYY-MM-DD
+  monthlyContribution Float?             @default(0)
+  accountId           String?
+  isCompleted         Boolean            @default(false)
+  notes               String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contributions       GoalContribution[]
+
+  @@index([userId])
+}
+
+model GoalContribution {
+  id        String   @id @default(uuid())
+  goalId    String
+  amount    Float
+  date      String   // YYYY-MM-DD
+  notes     String?
+  createdAt DateTime @default(now())
+
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+}
+
+model Debt {
+  id                String   @id @default(uuid())
+  userId            String
+  name              String
+  lender            String
+  type              String   // HOME_LOAN, CAR_LOAN, BIKE_LOAN, PERSONAL_LOAN, etc.
+  originalAmount    Float
+  outstandingAmount Float
+  interestRate      Float    // Annual %
+  monthlyEmi        Float
+  startDate         String   // YYYY-MM-DD
+  endDate           String?  // YYYY-MM-DD
+  dueDay            Int      @default(5) // 1-31
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RecurringTransaction {
+  id            String   @id @default(uuid())
+  userId        String
+  name          String
+  amount        Float
+  type          String   @default("EXPENSE")
+  frequency     String   @default("MONTHLY") // DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY
+  categoryId    String
+  subcategoryId String?
+  accountId     String
+  startDate     String   // YYYY-MM-DD
+  endDate       String?  // YYYY-MM-DD
+  dueDay        Int?     // 1-31
+  isActive      Boolean  @default(true)
+  lastRunDate   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model BankImport {
+  id               String                  @id @default(uuid())
+  userId           String
+  accountId        String
+  fileName         String
+  bankName         String
+  periodStart      String?
+  periodEnd        String?
+  totalParsed      Int                     @default(0)
+  totalCategorized Int                     @default(0)
+  status           String                  @default("PENDING_REVIEW") // PENDING_REVIEW, CONFIRMED, REJECTED
+  createdAt        DateTime                @default(now())
+
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account          Account                 @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactions     BankImportTransaction[]
+
+  @@index([userId])
+}
+
+model BankImportTransaction {
+  id              String     @id @default(uuid())
+  importId        String
+  date            String     // YYYY-MM-DD
+  description     String
+  referenceNumber String?
+  amount          Float
+  type            String     @default("EXPENSE")
+  paymentMethod   String     @default("UPI")
+  balanceAfter    Float?
+  categoryId      String?
+  subcategoryId   String?
+  confidence      Float      @default(0.5)
+  isDuplicate     Boolean    @default(false)
+  duplicateReason String?
+  isSkipped       Boolean    @default(false)
+  rawText         String?
+
+  bankImport      BankImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([importId])
+}
+
+model MonthlySummary {
+  id          String   @id @default(uuid())
+  userId      String
+  month       String   // YYYY-MM
+  income      Float    @default(0)
+  expenses    Float    @default(0)
+  savings     Float    @default(0)
+  savingsRate Float    @default(0)
+  totalEmi    Float    @default(0)
+  totalDebt   Float    @default(0)
+  bankBalance Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month])
+}
