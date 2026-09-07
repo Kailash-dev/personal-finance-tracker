@@ -221,7 +221,23 @@ export const DebtsPage: React.FC = () => {
   const [borrowDate, setBorrowDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [bHasInterest, setBHasInterest] = useState(false);
+  const [bInterestRateMonthly, setBInterestRateMonthly] = useState('2');
+  const [bMonthlyInterestAmount, setBMonthlyInterestAmount] = useState('');
   const [recordCashFlow, setRecordCashFlow] = useState(false);
+
+  // Edit Borrowing State
+  const [isEditBorrowingOpen, setIsEditBorrowingOpen] = useState(false);
+  const [selectedBorrowingToEdit, setSelectedBorrowingToEdit] = useState<Borrowing | null>(null);
+  const [editBPersonName, setEditBPersonName] = useState('');
+  const [editBAmount, setEditBAmount] = useState('');
+  const [editBType, setEditBType] = useState<BorrowingType>('BORROWED');
+  const [editBBorrowDate, setEditBBorrowDate] = useState('');
+  const [editBDueDate, setEditBDueDate] = useState('');
+  const [editBPurpose, setEditBPurpose] = useState('');
+  const [editBHasInterest, setEditBHasInterest] = useState(false);
+  const [editBInterestRateMonthly, setEditBInterestRateMonthly] = useState('2');
+  const [editBMonthlyInterestAmount, setEditBMonthlyInterestAmount] = useState('');
 
   // Income Streams State
   const [incomeStreams, setIncomeStreams] = useState<IncomeStream[]>([]);
@@ -273,15 +289,16 @@ export const DebtsPage: React.FC = () => {
     setOriginalAmount(origCalc ? origCalc.toString() : '');
     setOutstandingAmount(remCalc ? remCalc.toString() : '');
     setInterestRate(
-      presetType === 'CHIT_FUND_VC' ||
-      presetType === 'PERSONAL_BORROWING' ||
-      presetType === 'RENT_HOUSING' ||
-      presetType === 'GROCERIES_FOOD' ||
-      presetType === 'MILK_DAIRY' ||
-      presetType === 'UTILITIES_BILLS' ||
-      presetType === 'MAID_COOK' ||
-      presetType === 'FUEL_TRANSPORT' ||
-      presetType === 'FAMILY_PERSONAL'
+      presetType === 'PERSONAL_BORROWING'
+        ? '24' // 24% p.a. (2% per month standard for hand loans on interest)
+        : presetType === 'CHIT_FUND_VC' ||
+          presetType === 'RENT_HOUSING' ||
+          presetType === 'GROCERIES_FOOD' ||
+          presetType === 'MILK_DAIRY' ||
+          presetType === 'UTILITIES_BILLS' ||
+          presetType === 'MAID_COOK' ||
+          presetType === 'FUEL_TRANSPORT' ||
+          presetType === 'FAMILY_PERSONAL'
         ? '0'
         : '9.5'
     );
@@ -427,6 +444,11 @@ export const DebtsPage: React.FC = () => {
     if (!personName || !numAmount || numAmount <= 0) return;
 
     try {
+      const monthlyRate = bHasInterest ? parseFloat(bInterestRateMonthly) || 0 : undefined;
+      const monthlyInterest = bHasInterest
+        ? parseFloat(bMonthlyInterestAmount) || (monthlyRate ? (numAmount * monthlyRate) / 100 : undefined)
+        : undefined;
+
       await dataProvider.createBorrowing({
         userId: authUser?.id || user?.id || 'user_1',
         type: borrowingType,
@@ -435,6 +457,9 @@ export const DebtsPage: React.FC = () => {
         borrowDate,
         dueDate: dueDate || undefined,
         purpose: purpose || undefined,
+        hasInterest: bHasInterest,
+        interestRateMonthly: monthlyRate,
+        monthlyInterestAmount: monthlyInterest,
         recordCashFlow,
       });
 
@@ -443,7 +468,55 @@ export const DebtsPage: React.FC = () => {
       setBAmount('');
       setPurpose('');
       setDueDate('');
+      setBHasInterest(false);
+      setBInterestRateMonthly('2');
+      setBMonthlyInterestAmount('');
       setRecordCashFlow(false);
+      triggerRefresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleOpenEditBorrowing = (b: Borrowing) => {
+    setSelectedBorrowingToEdit(b);
+    setEditBPersonName(b.personName);
+    setEditBAmount(b.amount.toString());
+    setEditBType(b.type);
+    setEditBBorrowDate(b.borrowDate);
+    setEditBDueDate(b.dueDate || '');
+    setEditBPurpose(b.purpose || '');
+    setEditBHasInterest(!!b.hasInterest || !!b.interestRateMonthly || !!b.monthlyInterestAmount);
+    setEditBInterestRateMonthly(b.interestRateMonthly?.toString() || '2');
+    setEditBMonthlyInterestAmount(b.monthlyInterestAmount?.toString() || (b.interestRateMonthly ? ((b.amount * b.interestRateMonthly) / 100).toString() : ''));
+    setIsEditBorrowingOpen(true);
+  };
+
+  const handleSaveEditBorrowing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBorrowingToEdit || !editBPersonName || !editBAmount) return;
+
+    try {
+      const numAmount = parseFloat(editBAmount) || selectedBorrowingToEdit.amount;
+      const monthlyRate = editBHasInterest ? parseFloat(editBInterestRateMonthly) || 0 : undefined;
+      const monthlyInterest = editBHasInterest
+        ? parseFloat(editBMonthlyInterestAmount) || (monthlyRate ? (numAmount * monthlyRate) / 100 : undefined)
+        : undefined;
+
+      await dataProvider.updateBorrowing(selectedBorrowingToEdit.id, {
+        personName: editBPersonName,
+        amount: numAmount,
+        type: editBType,
+        borrowDate: editBBorrowDate,
+        dueDate: editBDueDate || undefined,
+        purpose: editBPurpose || undefined,
+        hasInterest: editBHasInterest,
+        interestRateMonthly: monthlyRate,
+        monthlyInterestAmount: monthlyInterest,
+      });
+
+      setIsEditBorrowingOpen(false);
+      setSelectedBorrowingToEdit(null);
       triggerRefresh();
     } catch (err) {
       console.error(err);
@@ -1258,7 +1331,7 @@ export const DebtsPage: React.FC = () => {
                           {isBorrowed ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{b.personName}</h4>
                             <span
                               className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -1271,6 +1344,14 @@ export const DebtsPage: React.FC = () => {
                             >
                               {isSettled ? 'SETTLED 🎉' : isBorrowed ? 'I BORROWED' : 'I LENT'}
                             </span>
+                            {(b.hasInterest || b.interestRateMonthly || b.monthlyInterestAmount) && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 text-[10px] font-bold border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                                <Percent className="w-2.5 h-2.5 text-amber-600" />
+                                <span>
+                                  {b.interestRateMonthly || 2}%/mo ({formatINR(b.monthlyInterestAmount || (b.amount * (b.interestRateMonthly || 2)) / 100)}/mo)
+                                </span>
+                              </span>
+                            )}
                           </div>
                           {b.purpose && (
                             <p className="text-[11px] text-slate-400 mt-0.5">Purpose: {b.purpose}</p>
@@ -1331,6 +1412,15 @@ export const DebtsPage: React.FC = () => {
                       </span>
 
                       <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditBorrowing(b)}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-bold text-[11px] border border-blue-500/20 transition-colors flex items-center gap-1"
+                          title="Edit borrowing, interest rate, dates, or amount"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+
                         {!isSettled && (
                           <>
                             <button
@@ -2134,6 +2224,68 @@ export const DebtsPage: React.FC = () => {
                 />
               </div>
 
+              {/* Hand Loan Interest Section */}
+              <div className="p-3 rounded-2xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="bHasInterest"
+                    checked={bHasInterest}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setBHasInterest(checked);
+                      if (checked && !bMonthlyInterestAmount) {
+                        const amt = parseFloat(bAmount) || 0;
+                        const rate = parseFloat(bInterestRateMonthly) || 2;
+                        if (amt > 0) setBMonthlyInterestAmount(((amt * rate) / 100).toString());
+                      }
+                    }}
+                    className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                  />
+                  <label htmlFor="bHasInterest" className="text-xs font-bold text-amber-900 dark:text-amber-200 cursor-pointer flex items-center gap-1">
+                    <Percent className="w-3.5 h-3.5 text-amber-600" />
+                    <span>This Hand Loan carries Monthly Interest (ब्याज)</span>
+                  </label>
+                </div>
+
+                {bHasInterest && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-amber-900 dark:text-amber-300 mb-1">
+                        Monthly Interest Rate (% / month)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 2 or 3%"
+                        value={bInterestRateMonthly}
+                        onChange={(e) => {
+                          const rate = e.target.value;
+                          setBInterestRateMonthly(rate);
+                          const amt = parseFloat(bAmount) || 0;
+                          const rNum = parseFloat(rate) || 0;
+                          if (amt > 0) setBMonthlyInterestAmount(((amt * rNum) / 100).toString());
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-700 text-xs font-bold text-amber-900 dark:text-amber-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-amber-900 dark:text-amber-300 mb-1">
+                        Monthly Interest Amount (₹ / month)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 1000 or 2000"
+                        value={bMonthlyInterestAmount}
+                        onChange={(e) => setBMonthlyInterestAmount(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-700 text-xs font-bold text-amber-900 dark:text-amber-200"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Auto Record in Bank balance toggle */}
               <div className="flex items-center gap-2 pt-1">
                 <input
@@ -2155,6 +2307,210 @@ export const DebtsPage: React.FC = () => {
                 >
                   <Check className="w-4 h-4" />
                   <span>Save Hand Loan Record</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 3B: Edit Short-Term Borrowing / Hand Loan */}
+      {isEditBorrowingOpen && selectedBorrowingToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsEditBorrowingOpen(false)} />
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 z-10 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-blue-500" />
+                  Edit Hand Loan / Borrowing
+                </h3>
+                <p className="text-[11px] text-slate-400">Update person name, principal amount, dates, or interest terms</p>
+              </div>
+              <button
+                onClick={() => setIsEditBorrowingOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditBorrowing} className="space-y-4 text-xs">
+              {/* Type toggle */}
+              <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditBType('BORROWED')}
+                  className={`py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    editBType === 'BORROWED'
+                      ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-sm'
+                      : 'text-slate-500'
+                  }`}
+                >
+                  <ArrowDownLeft className="w-4 h-4" />
+                  <span>Money I Borrowed</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditBType('LENT')}
+                  className={`py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    editBType === 'LENT'
+                      ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                      : 'text-slate-500'
+                  }`}
+                >
+                  <ArrowUpRight className="w-4 h-4" />
+                  <span>Money I Lent</span>
+                </button>
+              </div>
+
+              {/* Person & Amount */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    {editBType === 'BORROWED' ? 'Borrowed From (Person Name)' : 'Lent To (Person Name)'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editBPersonName}
+                    onChange={(e) => setEditBPersonName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Principal Amount (₹)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    step="any"
+                    value={editBAmount}
+                    onChange={(e) => {
+                      const newAmt = e.target.value;
+                      setEditBAmount(newAmt);
+                      const amt = parseFloat(newAmt) || 0;
+                      const rate = parseFloat(editBInterestRateMonthly) || 0;
+                      if (amt > 0 && rate > 0 && editBHasInterest) {
+                        setEditBMonthlyInterestAmount(((amt * rate) / 100).toString());
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-extrabold text-sm text-brand-600"
+                  />
+                </div>
+              </div>
+
+              {/* Date & Expected Due Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Date Borrowed/Lent</label>
+                  <input
+                    type="date"
+                    required
+                    value={editBBorrowDate}
+                    onChange={(e) => setEditBBorrowDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Expected Return Date</label>
+                  <input
+                    type="date"
+                    value={editBDueDate}
+                    onChange={(e) => setEditBDueDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Purpose / Notes</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Hand loan on interest / Relocation advance"
+                  value={editBPurpose}
+                  onChange={(e) => setEditBPurpose(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                />
+              </div>
+
+              {/* Hand Loan Interest Section */}
+              <div className="p-3 rounded-2xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/40 space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="editBHasInterest"
+                    checked={editBHasInterest}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setEditBHasInterest(checked);
+                      if (checked && !editBMonthlyInterestAmount) {
+                        const amt = parseFloat(editBAmount) || 0;
+                        const rate = parseFloat(editBInterestRateMonthly) || 2;
+                        if (amt > 0) setEditBMonthlyInterestAmount(((amt * rate) / 100).toString());
+                      }
+                    }}
+                    className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                  />
+                  <label htmlFor="editBHasInterest" className="text-xs font-bold text-amber-900 dark:text-amber-200 cursor-pointer flex items-center gap-1">
+                    <Percent className="w-3.5 h-3.5 text-amber-600" />
+                    <span>This Hand Loan carries Monthly Interest (ब्याज)</span>
+                  </label>
+                </div>
+
+                {editBHasInterest && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-amber-900 dark:text-amber-300 mb-1">
+                        Monthly Interest Rate (% / month)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 2 or 3%"
+                        value={editBInterestRateMonthly}
+                        onChange={(e) => {
+                          const rate = e.target.value;
+                          setEditBInterestRateMonthly(rate);
+                          const amt = parseFloat(editBAmount) || 0;
+                          const rNum = parseFloat(rate) || 0;
+                          if (amt > 0) setEditBMonthlyInterestAmount(((amt * rNum) / 100).toString());
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-700 text-xs font-bold text-amber-900 dark:text-amber-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-amber-900 dark:text-amber-300 mb-1">
+                        Monthly Interest Amount (₹ / month)
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 1000 or 2000"
+                        value={editBMonthlyInterestAmount}
+                        onChange={(e) => setEditBMonthlyInterestAmount(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-700 text-xs font-bold text-amber-900 dark:text-amber-200"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditBorrowingOpen(false)}
+                  className="w-1/3 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="w-2/3 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>

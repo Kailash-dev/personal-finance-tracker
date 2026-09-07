@@ -240,6 +240,9 @@ export interface Borrowing {
   carryForwardMonth?: string; // YYYY-MM (e.g., 2026-10)
   rolloverCount?: number;
   status: BorrowingStatus;
+  hasInterest?: boolean;
+  interestRateMonthly?: number; // Monthly interest % (e.g., 2% or 3%/month = 24-36% p.a.)
+  monthlyInterestAmount?: number; // Monthly interest amount in ₹ (e.g., ₹2,000/mo)
   purpose?: string;
   notes?: string;
   createdAt: string;
