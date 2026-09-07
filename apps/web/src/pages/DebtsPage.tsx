@@ -47,6 +47,7 @@ import {
   Activity,
   Layers,
   Award,
+  Pencil,
 } from 'lucide-react';
 
 import { SeptemberTrackerWidget } from '../components/dashboard/SeptemberTrackerWidget';
@@ -189,6 +190,22 @@ export const DebtsPage: React.FC = () => {
   const [emisPaid, setEmisPaid] = useState('');
   const [dueDay, setDueDay] = useState('10');
   const [notes, setNotes] = useState('');
+
+  // Edit Debt State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedDebtToEdit, setSelectedDebtToEdit] = useState<Debt | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editLender, setEditLender] = useState('');
+  const [editType, setEditType] = useState<DebtType>('PERSONAL_LOAN');
+  const [editOriginalAmount, setEditOriginalAmount] = useState('');
+  const [editOutstandingAmount, setEditOutstandingAmount] = useState('');
+  const [editInterestRate, setEditInterestRate] = useState('0');
+  const [editMonthlyEmi, setEditMonthlyEmi] = useState('');
+  const [editTotalTenureMonths, setEditTotalTenureMonths] = useState('');
+  const [editEmisPaid, setEditEmisPaid] = useState('');
+  const [editEmisRemaining, setEditEmisRemaining] = useState('');
+  const [editDueDay, setEditDueDay] = useState('10');
+  const [editNotes, setEditNotes] = useState('');
 
   // Short-Term Borrowings & Hand Loans State
   const [borrowings, setBorrowings] = useState<Borrowing[]>([]);
@@ -338,6 +355,65 @@ export const DebtsPage: React.FC = () => {
       setIsPayModalOpen(false);
       setSelectedDebtToPay(null);
       setPayAmount('');
+      triggerRefresh();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Edit Debt Handlers
+  const handleOpenEditModal = (debt: Debt) => {
+    setSelectedDebtToEdit(debt);
+    setEditName(debt.name);
+    setEditLender(debt.lender);
+    setEditType(debt.type);
+    setEditMonthlyEmi(debt.monthlyEmi?.toString() || '');
+    const tenure = debt.totalTenureMonths || (debt.monthlyEmi > 0 ? Math.max(1, Math.round((debt.originalAmount || 0) / debt.monthlyEmi)) : 12);
+    const paid = debt.emisPaid !== undefined ? debt.emisPaid : Math.max(0, tenure - (debt.emisRemaining || 0));
+    const remaining = debt.emisRemaining !== undefined ? debt.emisRemaining : Math.max(0, tenure - paid);
+
+    setEditTotalTenureMonths(tenure.toString());
+    setEditEmisPaid(paid.toString());
+    setEditEmisRemaining(remaining.toString());
+    setEditOriginalAmount(debt.originalAmount?.toString() || (debt.monthlyEmi * tenure).toString());
+    setEditOutstandingAmount(debt.outstandingAmount?.toString() || (debt.monthlyEmi * remaining).toString());
+    setEditInterestRate(debt.interestRate?.toString() || '0');
+    setEditDueDay(debt.dueDay?.toString() || '10');
+    setEditNotes(debt.notes || '');
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEditDebt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDebtToEdit || !editName || !editLender || !editMonthlyEmi) return;
+
+    try {
+      const emiNum = parseFloat(editMonthlyEmi) || 0;
+      const tenureNum = parseInt(editTotalTenureMonths, 10) || 1;
+      const paidNum = parseInt(editEmisPaid, 10) || 0;
+      const remNum = editEmisRemaining !== '' ? parseInt(editEmisRemaining, 10) : Math.max(0, tenureNum - paidNum);
+      const orig = parseFloat(editOriginalAmount) || emiNum * tenureNum;
+      const out = editOutstandingAmount !== '' && !isNaN(parseFloat(editOutstandingAmount))
+        ? parseFloat(editOutstandingAmount)
+        : emiNum * remNum;
+
+      await dataProvider.updateDebt(selectedDebtToEdit.id, {
+        name: editName,
+        lender: editLender,
+        type: editType,
+        monthlyEmi: emiNum,
+        totalTenureMonths: tenureNum,
+        emisPaid: paidNum,
+        emisRemaining: remNum,
+        originalAmount: orig,
+        outstandingAmount: out,
+        interestRate: parseFloat(editInterestRate) || 0,
+        dueDay: parseInt(editDueDay, 10) || 10,
+        notes: editNotes,
+      });
+
+      setIsEditModalOpen(false);
+      setSelectedDebtToEdit(null);
       triggerRefresh();
     } catch (err) {
       console.error(err);
@@ -1010,6 +1086,15 @@ export const DebtsPage: React.FC = () => {
 
                         <div className="flex items-center gap-1.5">
                           <button
+                            onClick={() => handleOpenEditModal(debt)}
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-bold text-[11px] border border-blue-500/20 transition-colors flex items-center gap-1"
+                            title="Edit EMI details, tenure, paid/remaining EMIs, or outstanding balance"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+
+                          <button
                             onClick={() => handleOpenPayModal(debt)}
                             className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] border border-emerald-500/20 transition-colors flex items-center gap-1"
                             title="Log this month payment"
@@ -1587,6 +1672,305 @@ export const DebtsPage: React.FC = () => {
                 >
                   <Check className="w-4 h-4" />
                   <span>Save Monthly Outgoing</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 1B: Edit Debt / Loan / EMI Commitment Modal */}
+      {isEditModalOpen && selectedDebtToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsEditModalOpen(false)} />
+          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 z-10 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base flex items-center gap-2">
+                  <Pencil className="w-4 h-4 text-blue-500" />
+                  Edit Debt / EMI Commitment
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Update tenure, EMIs left, monthly EMI amount, or total outstanding payment
+                </p>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditDebt} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Debt / Loan Type</label>
+                <select
+                  value={editType}
+                  onChange={(e) => setEditType(e.target.value as DebtType)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-xs"
+                >
+                  <option value="PERSONAL_LOAN">💼 Personal Loan / Mobile EMI (Bajaj / NBFC)</option>
+                  <option value="BIKE_LOAN">🏍️ Bike / Two-Wheeler Loan EMI</option>
+                  <option value="PERSONAL_BORROWING">🤝 Hand Loan / Borrowed on Interest / Private Lender</option>
+                  <option value="CHIT_FUND_VC">🪙 Chit Fund / VC (VC 1, VC 2, Committee)</option>
+                  <option value="CREDIT_CARD_MIN_PAYMENT">💳 Credit Card EMI / Minimum Due (SBI/Axis/HDFC)</option>
+                  <option value="CAR_LOAN">🚗 Car Loan EMI</option>
+                  <option value="HOME_LOAN">🏠 Home Loan / Mortgage EMI</option>
+                  <option value="EDUCATION_LOAN">🎓 Education Loan</option>
+                  <option value="OTHER_OUTGOING">🔄 Other Fixed Loan Commitment</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Commitment / Expense Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Lender / FinTech / Bank
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editLender}
+                    onChange={(e) => setEditLender(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Monthly EMI Amount (₹)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={editMonthlyEmi}
+                    onChange={(e) => {
+                      const newEmi = e.target.value;
+                      setEditMonthlyEmi(newEmi);
+                      const emiNum = parseFloat(newEmi) || 0;
+                      const tenureNum = parseInt(editTotalTenureMonths, 10) || 0;
+                      const remNum = parseInt(editEmisRemaining, 10) || 0;
+                      if (emiNum > 0 && tenureNum > 0) {
+                        setEditOriginalAmount((emiNum * tenureNum).toString());
+                      }
+                      if (emiNum > 0 && remNum >= 0) {
+                        setEditOutstandingAmount((emiNum * remNum).toString());
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-brand-600"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Due Day of Month (1-31)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={editDueDay}
+                    onChange={(e) => setEditDueDay(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+
+              {/* Tenure & EMI Count Card */}
+              <div className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-800/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                    Tenure & Number of EMIs
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tenure = parseInt(editTotalTenureMonths, 10) || 0;
+                      const paid = parseInt(editEmisPaid, 10) || 0;
+                      const remaining = Math.max(0, tenure - paid);
+                      setEditEmisRemaining(remaining.toString());
+                      const emi = parseFloat(editMonthlyEmi) || 0;
+                      if (emi > 0) {
+                        setEditOutstandingAmount((emi * remaining).toString());
+                      }
+                    }}
+                    className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+                  >
+                    ⚡ Auto-Calc Left
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-indigo-800 dark:text-indigo-300 mb-1">
+                      Total Tenure (Months)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 24 or 36"
+                      value={editTotalTenureMonths}
+                      onChange={(e) => {
+                        const newTenure = e.target.value;
+                        setEditTotalTenureMonths(newTenure);
+                        const tenureNum = parseInt(newTenure, 10) || 0;
+                        const paidNum = parseInt(editEmisPaid, 10) || 0;
+                        const remNum = Math.max(0, tenureNum - paidNum);
+                        setEditEmisRemaining(remNum.toString());
+                        const emiNum = parseFloat(editMonthlyEmi) || 0;
+                        if (emiNum > 0) {
+                          setEditOriginalAmount((emiNum * tenureNum).toString());
+                          setEditOutstandingAmount((emiNum * remNum).toString());
+                        }
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 text-xs font-bold text-center"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-emerald-800 dark:text-emerald-300 mb-1">
+                      EMIs Paid So Far
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 1 or 30"
+                      value={editEmisPaid}
+                      onChange={(e) => {
+                        const newPaid = e.target.value;
+                        setEditEmisPaid(newPaid);
+                        const paidNum = parseInt(newPaid, 10) || 0;
+                        const tenureNum = parseInt(editTotalTenureMonths, 10) || 0;
+                        const remNum = Math.max(0, tenureNum - paidNum);
+                        setEditEmisRemaining(remNum.toString());
+                        const emiNum = parseFloat(editMonthlyEmi) || 0;
+                        if (emiNum > 0) {
+                          setEditOutstandingAmount((emiNum * remNum).toString());
+                        }
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-xs font-bold text-emerald-700 dark:text-emerald-300 text-center"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-rose-800 dark:text-rose-300 mb-1">
+                      EMIs Remaining
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 23 or 6"
+                      value={editEmisRemaining}
+                      onChange={(e) => {
+                        const newRem = e.target.value;
+                        setEditEmisRemaining(newRem);
+                        const remNum = parseInt(newRem, 10) || 0;
+                        const emiNum = parseFloat(editMonthlyEmi) || 0;
+                        if (emiNum > 0) {
+                          setEditOutstandingAmount((emiNum * remNum).toString());
+                        }
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-700 text-xs font-bold text-rose-700 dark:text-rose-300 text-center"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Totals Card */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Loan Totals & Balance Remaining
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Directly editable for late fees or adjustments
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Total Loan Amount (₹)
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="e.g. 225000"
+                      value={editOriginalAmount}
+                      onChange={(e) => setEditOriginalAmount(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-rose-600 dark:text-rose-400 mb-1">
+                      Remaining for Payment (₹)
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      placeholder="e.g. 37500"
+                      value={editOutstandingAmount}
+                      onChange={(e) => setEditOutstandingAmount(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-700 text-xs font-bold text-rose-600 dark:text-rose-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      Interest Rate (% p.a.)
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={editInterestRate}
+                      onChange={(e) => setEditInterestRate(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Notes / Description</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Financed Jan 2024 / 0% interest tenure"
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="w-1/3 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="w-2/3 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>
