@@ -28,17 +28,17 @@ export const GoalsPage: React.FC = () => {
   const [contributionAmount, setContributionAmount] = useState('');
 
   // Emergency Fund Calculator state
-  const [essentialExpense, setEssentialExpense] = useState('45000');
+  const [essentialExpense, setEssentialExpense] = useState('');
   const [targetMonths, setTargetMonths] = useState<3 | 6 | 9 | 12>(6);
-  const [emergencySavings, setEmergencySavings] = useState('120000');
+  const [emergencySavings, setEmergencySavings] = useState('');
 
   // New Goal Form State
   const [name, setName] = useState('');
   const [category, setCategory] = useState<GoalCategory>('VEHICLE_CAR');
   const [targetAmount, setTargetAmount] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
-  const [targetDate, setTargetDate] = useState('2028-12-31');
-  const [monthlyContribution, setMonthlyContribution] = useState('15000');
+  const [targetDate, setTargetDate] = useState('');
+  const [monthlyContribution, setMonthlyContribution] = useState('');
 
   useEffect(() => {
     const loadGoals = async () => {

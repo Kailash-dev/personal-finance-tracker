@@ -21,7 +21,7 @@ import {
 
 export const SettingsPage: React.FC = () => {
   const { user, theme, toggleTheme, categories, triggerRefresh } = useFinance();
-  const [monthlyIncome, setMonthlyIncome] = useState(user?.monthlyIncome?.toString() || '120000');
+  const [monthlyIncome, setMonthlyIncome] = useState(user?.monthlyIncome ? user.monthlyIncome.toString() : '');
   const [rules, setRules] = useState<MerchantRule[]>([]);
   const [isAddingRule, setIsAddingRule] = useState(false);
   const [newPattern, setNewPattern] = useState('');
