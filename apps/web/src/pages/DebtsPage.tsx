@@ -162,12 +162,14 @@ export const DebtsPage: React.FC = () => {
   const { user, selectedMonth, refreshTrigger, triggerRefresh } = useFinance();
   const { user: authUser } = useAuth();
 
-  // 4 Core Tabs:
-  // 1. OUTGOINGS (Rent, Groceries, Milk, Bills, VC, EMIs)
-  // 2. HAND_BORROWINGS (Current month short-term borrowings & 1-click carry-forward/rollover)
-  // 3. CIBIL_SCORE (CIBIL score improvement, Credit Utilization <30%, Axis NOC tracker, Auto-debit safety)
-  // 4. INCOME_STREAMS (Job Salary + Freelance Gigs + Side Income gap calculator)
-  const [activeTab, setActiveTab] = useState<'OUTGOINGS' | 'HAND_BORROWINGS' | 'CIBIL_SCORE' | 'INCOME_STREAMS'>('OUTGOINGS');
+  // 5 Core Tabs:
+  // 1. ALL_DEBTS (Personal Loans, Bike EMIs, Mobile Finance, Credit Cards, Chit Funds, Hand Loans)
+  // 2. LIVING_OUTGOINGS (Rent, Groceries, Milk, Bills, Maid, Petrol, Allowance)
+  // 3. HAND_BORROWINGS (Current month short-term borrowings & 1-click carry-forward/rollover)
+  // 4. CIBIL_SCORE (CIBIL score improvement, Credit Utilization <30%, Axis NOC tracker, Auto-debit safety)
+  // 5. INCOME_STREAMS (Job Salary + Freelance Gigs + Side Income gap calculator)
+  const [activeTab, setActiveTab] = useState<'ALL_DEBTS' | 'LIVING_OUTGOINGS' | 'HAND_BORROWINGS' | 'CIBIL_SCORE' | 'INCOME_STREAMS'>('ALL_DEBTS');
+  const [debtFilter, setDebtFilter] = useState<'ALL' | 'LOANS' | 'VEHICLE_EMIS' | 'CARDS' | 'CHITS' | 'HAND_LOANS'>('ALL');
 
   // Debts / Outgoings State
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -179,12 +181,12 @@ export const DebtsPage: React.FC = () => {
   // Form states for Outgoing/Debt
   const [name, setName] = useState('');
   const [lender, setLender] = useState('');
-  const [type, setType] = useState<DebtType>('RENT_HOUSING');
+  const [type, setType] = useState<DebtType>('PERSONAL_LOAN');
   const [originalAmount, setOriginalAmount] = useState('');
   const [outstandingAmount, setOutstandingAmount] = useState('');
   const [interestRate, setInterestRate] = useState('0');
   const [monthlyEmi, setMonthlyEmi] = useState('');
-  const [dueDay, setDueDay] = useState('5');
+  const [dueDay, setDueDay] = useState('10');
   const [notes, setNotes] = useState('');
 
   // Short-Term Borrowings & Hand Loans State
@@ -251,7 +253,7 @@ export const DebtsPage: React.FC = () => {
         ? '0'
         : '9.5'
     );
-    setDueDay('5');
+    setDueDay('10');
     setNotes('');
     setIsAddModalOpen(true);
   };
@@ -275,7 +277,7 @@ export const DebtsPage: React.FC = () => {
         interestRate: parseFloat(interestRate) || 0,
         monthlyEmi: emiNum,
         startDate: new Date().toISOString().split('T')[0],
-        dueDay: parseInt(dueDay, 10) || 5,
+        dueDay: parseInt(dueDay, 10) || 10,
         notes,
       });
 
@@ -292,7 +294,7 @@ export const DebtsPage: React.FC = () => {
   };
 
   const handleDeleteDebt = async (id: string) => {
-    if (window.confirm('Are you sure you want to remove this outgoing commitment?')) {
+    if (window.confirm('Are you sure you want to remove this debt commitment?')) {
       await dataProvider.deleteDebt(id);
       triggerRefresh();
     }
@@ -427,8 +429,36 @@ export const DebtsPage: React.FC = () => {
   const incomeSummary = calculateIncomeSummary(incomeStreams, baseSalary);
   const totalEarning = incomeSummary.totalInflow;
 
-  const summary = calculateDebtSummary(debts, totalEarning);
-  const freeCashflow = Math.max(0, totalEarning - summary.totalMonthlyEmi);
+  // Split Debts into Pure Debts vs Living Commitments
+  const pureDebts = debts.filter((d) =>
+    [
+      'PERSONAL_LOAN',
+      'BIKE_LOAN',
+      'CAR_LOAN',
+      'HOME_LOAN',
+      'CREDIT_CARD_MIN_PAYMENT',
+      'CHIT_FUND_VC',
+      'PERSONAL_BORROWING',
+      'EDUCATION_LOAN',
+      'OTHER_OUTGOING',
+    ].includes(d.type)
+  );
+
+  const livingCommitments = debts.filter((d) =>
+    [
+      'RENT_HOUSING',
+      'GROCERIES_FOOD',
+      'MILK_DAIRY',
+      'UTILITIES_BILLS',
+      'MAID_COOK',
+      'FUEL_TRANSPORT',
+      'FAMILY_PERSONAL',
+    ].includes(d.type)
+  );
+
+  const pureDebtSummary = calculateDebtSummary(pureDebts, totalEarning);
+  const totalSummary = calculateDebtSummary(debts, totalEarning);
+  const freeCashflow = Math.max(0, totalEarning - totalSummary.totalMonthlyEmi);
 
   // Borrowing Metrics
   const borrowedList = borrowings.filter((b) => b.type === 'BORROWED');
@@ -442,6 +472,16 @@ export const DebtsPage: React.FC = () => {
     .filter((b) => b.status !== 'SETTLED')
     .reduce((sum, b) => sum + (b.amount - b.amountSettled), 0);
 
+  // Filtered Pure Debts for Display
+  const filteredPureDebts = pureDebts.filter((d) => {
+    if (debtFilter === 'LOANS') return d.type === 'PERSONAL_LOAN' || d.type === 'HOME_LOAN' || d.type === 'EDUCATION_LOAN';
+    if (debtFilter === 'VEHICLE_EMIS') return d.type === 'BIKE_LOAN' || d.type === 'CAR_LOAN';
+    if (debtFilter === 'CARDS') return d.type === 'CREDIT_CARD_MIN_PAYMENT';
+    if (debtFilter === 'CHITS') return d.type === 'CHIT_FUND_VC';
+    if (debtFilter === 'HAND_LOANS') return d.type === 'PERSONAL_BORROWING';
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -451,12 +491,30 @@ export const DebtsPage: React.FC = () => {
             Comprehensive Debt, CIBIL & Multi-Income Command Center
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Pro Financial Control: Rent, Groceries, EMIs, Carry-Forward Hand Loans, CIBIL Score 750+ Repair & Freelance Income
+            Pro Financial Control: Log All Debts, EMIs, Hand Loans, CIBIL 750+ Repair, Living Costs & Freelance Income
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {activeTab === 'OUTGOINGS' && (
+          {activeTab === 'ALL_DEBTS' && (
+            <button
+              onClick={() => {
+                setType('PERSONAL_LOAN');
+                setName('');
+                setLender('');
+                setMonthlyEmi('');
+                setOriginalAmount('');
+                setOutstandingAmount('');
+                setIsAddModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all self-start"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Log / Add New Debt</span>
+            </button>
+          )}
+
+          {activeTab === 'LIVING_OUTGOINGS' && (
             <button
               onClick={() => {
                 setType('RENT_HOUSING');
@@ -464,10 +522,10 @@ export const DebtsPage: React.FC = () => {
                 setLender('');
                 setIsAddModalOpen(true);
               }}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all self-start"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition-all self-start"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Add Monthly Outgoing</span>
+              <span>+ Add Living Outgoing</span>
             </button>
           )}
 
@@ -495,7 +553,7 @@ export const DebtsPage: React.FC = () => {
                 setStreamDay('15');
                 setIsAddIncomeStreamOpen(true);
               }}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition-all self-start"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md shadow-purple-500/25 transition-all self-start"
             >
               <Plus className="w-4 h-4" />
               <span>+ Add Freelance / Side Income</span>
@@ -507,19 +565,32 @@ export const DebtsPage: React.FC = () => {
       {/* Kailash's September Cash Flow & Debt Tracker Widget */}
       <SeptemberTrackerWidget />
 
-      {/* 4 Main Feature Tabs */}
+      {/* 5 Main Feature Tabs */}
       <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80">
         <button
           type="button"
-          onClick={() => setActiveTab('OUTGOINGS')}
+          onClick={() => setActiveTab('ALL_DEBTS')}
           className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'OUTGOINGS'
+            activeTab === 'ALL_DEBTS'
               ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
+          <Landmark className="w-4 h-4" />
+          <span>⚡ All Debts & EMIs ({pureDebts.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('LIVING_OUTGOINGS')}
+          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            activeTab === 'LIVING_OUTGOINGS'
+              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
           <Home className="w-4 h-4" />
-          <span>Outgoings & EMIs ({debts.length})</span>
+          <span>Living Costs ({livingCommitments.length})</span>
         </button>
 
         <button
@@ -532,7 +603,7 @@ export const DebtsPage: React.FC = () => {
           }`}
         >
           <HandCoins className="w-4 h-4" />
-          <span>Borrowings & Rollover ({borrowings.filter((b) => b.status !== 'SETTLED').length})</span>
+          <span>Hand Loans & Rollover ({borrowings.filter((b) => b.status !== 'SETTLED').length})</span>
         </button>
 
         <button
@@ -545,7 +616,7 @@ export const DebtsPage: React.FC = () => {
           }`}
         >
           <ShieldCheck className="w-4 h-4" />
-          <span>CIBIL Score Improvement & Repair</span>
+          <span>CIBIL Score 750+ Repair</span>
         </button>
 
         <button
@@ -553,7 +624,7 @@ export const DebtsPage: React.FC = () => {
           onClick={() => setActiveTab('INCOME_STREAMS')}
           className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'INCOME_STREAMS'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
@@ -563,235 +634,253 @@ export const DebtsPage: React.FC = () => {
       </div>
 
       {/* =========================================================
-          TAB 1: MONTHLY OUTGOINGS (RENT, GROCERY, MILK, BILLS, MAID, VC, EMIS)
+          TAB 1: ALL DEBTS, LOANS, EMIS & CHITS (LOG & TRACK)
          ========================================================= */}
-      {activeTab === 'OUTGOINGS' && (
+      {activeTab === 'ALL_DEBTS' && (
         <div className="space-y-6 animate-in fade-in-50 duration-150">
-          {/* Quick Add Presets Bar */}
-          <div className="glass-card p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                ⚡ 1-Click Fast Presets (Rent, Groceries, Milk, Bills, Maid, VCs, Cards):
+          {/* Fast Debt Logger Strip */}
+          <div className="glass-card p-5 border-2 border-brand-500/30 bg-gradient-to-br from-white via-indigo-50/20 to-brand-50/25 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950/30 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-brand-500/20">
+                  <Landmark className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm sm:text-base">
+                    ⚡ Fast Debt & Loan Logger
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Log bank personal loans, bike EMIs, mobile finance, credit cards, chit schemes, or fintech borrowings
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-300 font-bold uppercase tracking-wider self-start sm:self-auto">
+                Real-Time Calibration
               </span>
-              <span className="text-[11px] text-slate-400">Click to add immediately</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-              <button
-                onClick={() => openPresetModal('RENT_HOUSING', 'House Rent / Society Maintenance', 'Landlord / Society')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-indigo-500/30 bg-indigo-50/60 dark:bg-indigo-950/30 hover:bg-indigo-100/60 text-xs font-semibold text-indigo-900 dark:text-indigo-200 transition-colors"
-              >
-                <Home className="w-4 h-4 text-indigo-500 shrink-0" />
-                <span className="truncate">+ Rent & Society</span>
-              </button>
 
-              <button
-                onClick={() => openPresetModal('GROCERIES_FOOD', 'DMart / Monthly Groceries', 'DMart / Supermarket')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-amber-500/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
-              >
-                <ShoppingCart className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="truncate">+ Groceries</span>
-              </button>
+            {/* 1-Click Fast Presets Bar */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                1-Click Quick Presets:
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('PERSONAL_LOAN', 'Ram Fincorp Small Borrowing', 'Ram Fincorp', '16650')}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-orange-500/30 bg-orange-50/60 dark:bg-orange-950/30 hover:bg-orange-100/60 text-xs font-semibold text-orange-900 dark:text-orange-200 transition-colors"
+                >
+                  <Landmark className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <span className="truncate">+ Ram Fincorp</span>
+                </button>
 
-              <button
-                onClick={() => openPresetModal('MILK_DAIRY', 'Daily Milk & Dairy', 'Amul / Country Delight / Milkman')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-sky-500/30 bg-sky-50/60 dark:bg-sky-950/30 hover:bg-sky-100/60 text-xs font-semibold text-sky-900 dark:text-sky-200 transition-colors"
-              >
-                <Milk className="w-4 h-4 text-sky-500 shrink-0" />
-                <span className="truncate">+ Daily Milk</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('BIKE_LOAN', 'Bike Loan Monthly EMI', 'Hero Fincorp / HDFC', '6250')}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-rose-500/30 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100/60 text-xs font-semibold text-rose-900 dark:text-rose-200 transition-colors"
+                >
+                  <Bike className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                  <span className="truncate">+ Bike EMI</span>
+                </button>
 
-              <button
-                onClick={() => openPresetModal('UTILITIES_BILLS', 'Electricity & Gas Bills', 'Electricity Board / IGL')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-yellow-500/30 bg-yellow-50/60 dark:bg-yellow-950/30 hover:bg-yellow-100/60 text-xs font-semibold text-yellow-900 dark:text-yellow-200 transition-colors"
-              >
-                <Zap className="w-4 h-4 text-yellow-500 shrink-0" />
-                <span className="truncate">+ Bills & Gas</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('PERSONAL_LOAN', 'Bajaj Finserv Mobile EMI', 'Bajaj Finance', '3800')}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-blue-500/30 bg-blue-50/60 dark:bg-blue-950/30 hover:bg-blue-100/60 text-xs font-semibold text-blue-900 dark:text-blue-200 transition-colors"
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <span className="truncate">+ Mobile EMI</span>
+                </button>
 
-              <button
-                onClick={() => openPresetModal('MAID_COOK', 'House Maid & Cook Salary', 'Maid / Cook')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-teal-500/30 bg-teal-50/60 dark:bg-teal-950/30 hover:bg-teal-100/60 text-xs font-semibold text-teal-900 dark:text-teal-200 transition-colors"
-              >
-                <Users className="w-4 h-4 text-teal-500 shrink-0" />
-                <span className="truncate">+ Maid Salary</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('CHIT_FUND_VC', 'Chit Fund (VC 2) EMI', 'Chit Committee', '4500')}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-amber-600/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
+                >
+                  <Coins className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span className="truncate">+ Chit VC 2</span>
+                </button>
 
-              <button
-                onClick={() => openPresetModal('FUEL_TRANSPORT', 'Monthly Petrol & Fuel', 'HPCL / BPCL / IOCL')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-pink-500/30 bg-pink-50/60 dark:bg-pink-950/30 hover:bg-pink-100/60 text-xs font-semibold text-pink-900 dark:text-pink-200 transition-colors"
-              >
-                <Fuel className="w-4 h-4 text-pink-500 shrink-0" />
-                <span className="truncate">+ Fuel / Petrol</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'SBI Credit Card Minimum Due', 'SBI Cards', '12108')}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-purple-500/30 bg-purple-50/60 dark:bg-purple-950/30 hover:bg-purple-100/60 text-xs font-semibold text-purple-900 dark:text-purple-200 transition-colors"
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                  <span className="truncate">+ SBI Card Min</span>
+                </button>
 
-              <button
-                onClick={() => openPresetModal('CHIT_FUND_VC', 'VC 1 (Monthly Chit)', 'Chit Organizer / Committee')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-amber-600/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
-              >
-                <Coins className="w-4 h-4 text-amber-600 shrink-0" />
-                <span className="truncate">+ VC 1 (Chit)</span>
-              </button>
-
-              <button
-                onClick={() => openPresetModal('CHIT_FUND_VC', 'VC 2 (Monthly Chit)', 'Chit Organizer / Committee')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-amber-600/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
-              >
-                <Coins className="w-4 h-4 text-amber-600 shrink-0" />
-                <span className="truncate">+ VC 2 (Chit)</span>
-              </button>
-
-              <button
-                onClick={() => openPresetModal('BIKE_LOAN', 'Bike EMI (Royal Enfield / Duke)', 'HDFC / Bajaj Finserv')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-rose-500/30 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100/60 text-xs font-semibold text-rose-900 dark:text-rose-200 transition-colors"
-              >
-                <Bike className="w-4 h-4 text-rose-500 shrink-0" />
-                <span className="truncate">+ Bike EMI</span>
-              </button>
-
-              <button
-                onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'SBI Card Minimum Due', 'SBI Cards')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-purple-500/30 bg-purple-50/60 dark:bg-purple-950/30 hover:bg-purple-100/60 text-xs font-semibold text-purple-900 dark:text-purple-200 transition-colors"
-              >
-                <CreditCard className="w-4 h-4 text-purple-500 shrink-0" />
-                <span className="truncate">+ SBI Card Min</span>
-              </button>
-
-              <button
-                onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'RBL Card Minimum Due', 'RBL Bank')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-indigo-500/30 bg-indigo-50/60 dark:bg-indigo-950/30 hover:bg-indigo-100/60 text-xs font-semibold text-indigo-900 dark:text-indigo-200 transition-colors"
-              >
-                <CreditCard className="w-4 h-4 text-indigo-500 shrink-0" />
-                <span className="truncate">+ RBL Card Min</span>
-              </button>
-
-              <button
-                onClick={() => openPresetModal('PERSONAL_BORROWING', 'Personal Hand Loan', 'Friend / Relative')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/60 text-xs font-semibold text-emerald-900 dark:text-emerald-200 transition-colors"
-              >
-                <HandCoins className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span className="truncate">+ Hand Loan</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'Axis CC Final Settlement', 'Axis Bank', '1400')}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/60 text-xs font-semibold text-emerald-900 dark:text-emerald-200 transition-colors"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="truncate">+ Axis Settlement</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Summary Metrics Grid */}
+          {/* Pure Debt Summary Metrics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="glass-card p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-amber-500 uppercase tracking-wider">
-                  Total Monthly Commitments
-                </span>
-                <Calendar className="w-4 h-4 text-amber-500" />
-              </div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
-                {formatINR(summary.totalMonthlyEmi)}
-              </p>
-              <span className="text-xs text-slate-500">Rent + Groceries + Bills + EMIs</span>
-            </div>
-
-            <div className="glass-card p-5">
+            <div className="glass-card p-5 border-rose-500/20">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-rose-500 uppercase tracking-wider">
-                  Total Outstanding Principal
+                  Total Monthly Debt EMIs
                 </span>
-                <TrendingDown className="w-4 h-4 text-rose-500" />
+                <Calendar className="w-4 h-4 text-rose-500" />
               </div>
               <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
-                {formatINR(summary.totalOutstanding)}
+                {formatINR(pureDebtSummary.totalMonthlyEmi)}
               </p>
-              <span className="text-xs text-slate-500">Loans & Chit Schemes balance</span>
+              <span className="text-xs text-slate-500">Loans, EMIs, Chits & Card Minimums</span>
             </div>
 
-            <div className="glass-card p-5">
+            <div className="glass-card p-5 border-amber-500/20">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-amber-500 uppercase tracking-wider">
+                  Total Debt Outstanding
+                </span>
+                <TrendingDown className="w-4 h-4 text-amber-500" />
+              </div>
+              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
+                {formatINR(pureDebtSummary.totalOutstanding)}
+              </p>
+              <span className="text-xs text-slate-500">Principal balance across all lenders</span>
+            </div>
+
+            <div className="glass-card p-5 border-brand-500/20">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
-                  Fixed Outgoing Ratio
+                  Pure Debt DTI Ratio
                 </span>
                 <Percent className="w-4 h-4 text-brand-500" />
               </div>
               <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
-                {summary.debtToIncomeRatio.toFixed(1)}%
+                {pureDebtSummary.debtToIncomeRatio.toFixed(1)}%
               </p>
               <span className="text-xs text-slate-500">
-                {summary.debtToIncomeRatio <= 50
-                  ? '✓ Safe committed load (<50%)'
-                  : '⚠ High committed load (>50%)'}
+                {pureDebtSummary.debtToIncomeRatio <= 50 ? '✓ Within manageable limit (<50%)' : '⚠ High leverage (>50%)'}
               </span>
             </div>
 
-            <div className="glass-card p-5">
+            <div className="glass-card p-5 border-emerald-500/20">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">
-                  Free Disposable Cashflow
+                  Free Cashflow After All Debts
                 </span>
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
               </div>
               <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
                 {formatINR(freeCashflow)}
               </p>
-              <span className="text-xs text-slate-500">Left for savings & discretionary wants</span>
+              <span className="text-xs text-slate-500">Left for savings & discretionary spends</span>
             </div>
           </div>
 
-          {/* Sorting and Filter Toolbar */}
+          {/* Category Filter Chips & Sort Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Order Outgoings By:
-              </span>
-              <div className="flex items-center bg-white dark:bg-slate-900 rounded-xl p-0.5 border border-slate-200 dark:border-slate-700 text-xs font-semibold">
-                <span className="px-3 py-1 bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 rounded-lg flex items-center gap-1.5 font-bold">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>Calendar Timeline (9th → 10th → 12th → 15th → 25th → 28th → Oct 2nd)</span>
-                </span>
-              </div>
+            <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setDebtFilter('ALL')}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  debtFilter === 'ALL'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                All Debts ({pureDebts.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDebtFilter('LOANS')}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  debtFilter === 'LOANS'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                🏦 Bank & FinTech Loans
+              </button>
+              <button
+                type="button"
+                onClick={() => setDebtFilter('VEHICLE_EMIS')}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  debtFilter === 'VEHICLE_EMIS'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                🏍️ Bike & Consumer EMIs
+              </button>
+              <button
+                type="button"
+                onClick={() => setDebtFilter('CARDS')}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  debtFilter === 'CARDS'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                💳 Cards & Settlements
+              </button>
+              <button
+                type="button"
+                onClick={() => setDebtFilter('CHITS')}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  debtFilter === 'CHITS'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                🪙 Chit Funds / VC
+              </button>
+              <button
+                type="button"
+                onClick={() => setDebtFilter('HAND_LOANS')}
+                className={`px-3 py-1.5 rounded-xl transition-all ${
+                  debtFilter === 'HAND_LOANS'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                🤝 Hand Borrowings
+              </button>
             </div>
+
             <span className="text-xs text-slate-400 font-medium">
-              {debts.length} active monthly outgoings
+              Sorted by Chronological Timeline
             </span>
           </div>
 
-          {/* Outgoings Cards Grid */}
-          {debts.length === 0 ? (
+          {/* Debts Cards Grid */}
+          {filteredPureDebts.length === 0 ? (
             <div className="glass-card p-12 text-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto text-2xl">
-                📋
+              <div className="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 flex items-center justify-center mx-auto text-2xl">
+                💳
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  No Monthly Outgoings or Living Expenses Added Yet
+                  No Debts Logged in this Category
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
-                  Add all your recurring monthly costs: <strong>Rent, Groceries, Milk, Electricity Bills, Maid Salary, Petrol, VC 1, VC 2, Bike EMI, and Card Minimum Dues</strong>.
+                  Use the <strong>Fast Debt Logger</strong> or click <strong>"+ Log / Add New Debt"</strong> above to add any loan, EMI, or credit balance.
                 </p>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                <button
-                  onClick={async () => {
-                    await dataProvider.seedKailashFinanceData();
-                    triggerRefresh();
-                  }}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold text-xs shadow-lg shadow-brand-500/25 transition-all flex items-center gap-1.5"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Load Kailash's Complete September FinPlan</span>
-                </button>
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {debts
+              {filteredPureDebts
                 .slice()
                 .sort((a, b) => {
                   const getRank = (d: Debt) => {
                     if (d.id === 'debt_ram_fincorp') return 9.0;
                     if (d.id === 'debt_bike_emi') return 10.1;
                     if (d.id === 'debt_vc2_10th') return 10.2;
-                    if (d.id === 'debt_broker_fee') return 10.3;
-                    if (d.id === 'debt_wife_allowance') return 10.4;
                     if (d.id === 'debt_bajaj_mobile') return 12.0;
                     if (d.id === 'debt_axis_settlement') return 15.1;
-                    if (d.id === 'debt_groceries') return 15.2;
                     if (d.id === 'debt_vc2_25th') return 25.0;
                     if (d.id === 'debt_sbi_card') return 28.0;
                     if (d.id === 'debt_travel_emi') return 32.0;
@@ -807,7 +896,7 @@ export const DebtsPage: React.FC = () => {
                   const progressPct = debt.originalAmount > 0 ? (paidAmount / debt.originalAmount) * 100 : 0;
 
                   return (
-                    <div key={debt.id} className="glass-card p-5 space-y-4 hover:shadow-lg transition-shadow flex flex-col justify-between">
+                    <div key={debt.id} className="glass-card p-5 space-y-4 hover:shadow-lg transition-shadow flex flex-col justify-between border border-slate-200 dark:border-slate-800">
                       <div>
                         {/* Top Bar */}
                         <div className="flex items-start justify-between gap-2">
@@ -829,30 +918,28 @@ export const DebtsPage: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* Amount */}
+                        {/* Amount Box */}
                         <div className="mt-3.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-                          <span className="text-xs text-slate-500 font-medium">Monthly Amount:</span>
+                          <span className="text-xs text-slate-500 font-medium">Monthly EMI / Due:</span>
                           <span className="text-base font-extrabold text-brand-600 dark:text-brand-400">
                             {formatINR(debt.monthlyEmi)}/mo
                           </span>
                         </div>
                       </div>
 
-                      {/* Progress bar (if applicable) */}
-                      {debt.originalAmount > debt.monthlyEmi && (
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
-                            <span>Paid: {formatINR(paidAmount)}</span>
-                            <span>Remaining: {formatINR(debt.outstandingAmount)}</span>
-                          </div>
-                          <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-brand-500 to-emerald-500 rounded-full transition-all duration-500"
-                              style={{ width: `${Math.min(100, Math.max(5, progressPct))}%` }}
-                            />
-                          </div>
+                      {/* Progress bar */}
+                      <div>
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
+                          <span>Paid: {formatINR(paidAmount)}</span>
+                          <span>Remaining: {formatINR(debt.outstandingAmount)}</span>
                         </div>
-                      )}
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-brand-500 to-emerald-500 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.max(5, progressPct))}%` }}
+                          />
+                        </div>
+                      </div>
 
                       {/* Bottom details & Actions */}
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
@@ -872,7 +959,7 @@ export const DebtsPage: React.FC = () => {
                             title="Log this month payment"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Log Paid</span>
+                            <span>Log EMI Paid</span>
                           </button>
 
                           <button
@@ -889,6 +976,67 @@ export const DebtsPage: React.FC = () => {
                 })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* =========================================================
+          TAB 2: LIVING OUTGOINGS (RENT, GROCERY, MILK, BILLS, MAID, ALLOWANCE)
+         ========================================================= */}
+      {activeTab === 'LIVING_OUTGOINGS' && (
+        <div className="space-y-6 animate-in fade-in-50 duration-150">
+          {/* Living Outgoings Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {livingCommitments.map((debt) => {
+              const config = DEBT_TYPE_CONFIG[debt.type] || DEBT_TYPE_CONFIG.OTHER_OUTGOING;
+              const Icon = config.icon;
+              return (
+                <div key={debt.id} className="glass-card p-5 space-y-4 hover:shadow-lg transition-shadow flex flex-col justify-between border border-slate-200 dark:border-slate-800">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                        <Icon className={`w-5 h-5 ${config.color}`} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug">{debt.name}</h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">{debt.lender}</p>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${config.badgeBg}`}>
+                      {config.label}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+                    <span className="text-xs text-slate-500 font-medium">Monthly Planned:</span>
+                    <span className="text-base font-extrabold text-indigo-600 dark:text-indigo-400">
+                      {formatINR(debt.monthlyEmi)}/mo
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                    <span className="flex items-center gap-1 text-slate-500 font-semibold text-[11px]">
+                      <Calendar className="w-3.5 h-3.5 text-indigo-500" /> Due on {debt.dueDay}th
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleOpenPayModal(debt)}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] border border-emerald-500/20 transition-colors flex items-center gap-1"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Log Paid</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDebt(debt.id)}
+                        className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/60 text-slate-400 hover:text-rose-600 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
