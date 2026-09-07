@@ -214,6 +214,9 @@ export interface Debt {
   outstandingAmount: number;
   interestRate: number; // Annual % (e.g., 8.5)
   monthlyEmi: number;
+  totalTenureMonths?: number; // Total number of EMIs (e.g. 24, 36, 3)
+  emisPaid?: number; // Number of EMIs paid
+  emisRemaining?: number; // Number of remaining EMIs
   startDate: string;
   endDate?: string;
   dueDay: number; // 1-31

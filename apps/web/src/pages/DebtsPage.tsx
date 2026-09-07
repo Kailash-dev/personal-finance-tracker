@@ -3,7 +3,8 @@ import { useFinance } from '../context/FinanceContext';
 import { useAuth } from '../context/AuthContext';
 import { dataProvider } from '../services/dataProvider';
 import { Debt, DebtType, Borrowing, BorrowingType, IncomeStream, IncomeStreamType, CibilProfile } from '@personal-finance/types';
-import { formatINR, calculateDebtSummary, calculateIncomeSummary } from '@personal-finance/shared';
+import { formatINR, calculateDebtSummary, calculateIncomeSummary, calculateEmiDetails } from '@personal-finance/shared';
+import { format, parseISO } from 'date-fns';
 import {
   CreditCard,
   Percent,
@@ -186,6 +187,8 @@ export const DebtsPage: React.FC = () => {
   const [outstandingAmount, setOutstandingAmount] = useState('');
   const [interestRate, setInterestRate] = useState('0');
   const [monthlyEmi, setMonthlyEmi] = useState('');
+  const [totalTenureMonths, setTotalTenureMonths] = useState('');
+  const [emisPaid, setEmisPaid] = useState('');
   const [dueDay, setDueDay] = useState('10');
   const [notes, setNotes] = useState('');
 
@@ -233,13 +236,27 @@ export const DebtsPage: React.FC = () => {
     loadAll();
   }, [refreshTrigger, selectedMonth]);
 
-  const openPresetModal = (presetType: DebtType, defaultName: string, defaultLender: string, defaultAmount?: string) => {
+  const openPresetModal = (
+    presetType: DebtType,
+    defaultName: string,
+    defaultLender: string,
+    defaultAmount?: string,
+    tenure?: number,
+    paid?: number
+  ) => {
     setType(presetType);
     setName(defaultName);
     setLender(defaultLender);
-    setOriginalAmount(defaultAmount ? (parseFloat(defaultAmount) * 12).toString() : '');
-    setOutstandingAmount(defaultAmount ? (parseFloat(defaultAmount) * 12).toString() : '');
-    setMonthlyEmi(defaultAmount || '');
+    const emiVal = defaultAmount || '';
+    setMonthlyEmi(emiVal);
+    const tenureVal = tenure || 12;
+    const paidVal = paid || 0;
+    setTotalTenureMonths(tenureVal.toString());
+    setEmisPaid(paidVal.toString());
+    const origCalc = defaultAmount ? parseFloat(defaultAmount) * tenureVal : 0;
+    const remCalc = defaultAmount ? parseFloat(defaultAmount) * (tenureVal - paidVal) : 0;
+    setOriginalAmount(origCalc ? origCalc.toString() : '');
+    setOutstandingAmount(remCalc ? remCalc.toString() : '');
     setInterestRate(
       presetType === 'CHIT_FUND_VC' ||
       presetType === 'PERSONAL_BORROWING' ||
@@ -264,8 +281,11 @@ export const DebtsPage: React.FC = () => {
 
     try {
       const emiNum = parseFloat(monthlyEmi);
-      const orig = parseFloat(originalAmount) || parseFloat(outstandingAmount) || emiNum * 12;
-      const out = parseFloat(outstandingAmount) || orig;
+      const tenureNum = parseInt(totalTenureMonths, 10) || Math.max(1, Math.round((parseFloat(originalAmount) || emiNum * 12) / emiNum));
+      const paidNum = parseInt(emisPaid, 10) || 0;
+      const remNum = Math.max(0, tenureNum - paidNum);
+      const orig = parseFloat(originalAmount) || emiNum * tenureNum;
+      const out = parseFloat(outstandingAmount) || emiNum * remNum;
 
       await dataProvider.createDebt({
         userId: authUser?.id || user?.id || 'user_1',
@@ -276,6 +296,9 @@ export const DebtsPage: React.FC = () => {
         outstandingAmount: out,
         interestRate: parseFloat(interestRate) || 0,
         monthlyEmi: emiNum,
+        totalTenureMonths: tenureNum,
+        emisPaid: paidNum,
+        emisRemaining: remNum,
         startDate: new Date().toISOString().split('T')[0],
         dueDay: parseInt(dueDay, 10) || 10,
         notes,
@@ -287,6 +310,8 @@ export const DebtsPage: React.FC = () => {
       setOriginalAmount('');
       setOutstandingAmount('');
       setMonthlyEmi('');
+      setTotalTenureMonths('');
+      setEmisPaid('');
       triggerRefresh();
     } catch (err) {
       console.error(err);
@@ -722,60 +747,80 @@ export const DebtsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Pure Debt Summary Metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="glass-card p-5 border-rose-500/20">
+          {/* Pure Debt Summary Metrics - 5 Key Indicators */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            {/* Total Outstanding */}
+            <div className="glass-card p-4 border-amber-500/20 bg-gradient-to-br from-amber-50/10 to-transparent">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-rose-500 uppercase tracking-wider">
-                  Total Monthly Debt EMIs
-                </span>
-                <Calendar className="w-4 h-4 text-rose-500" />
-              </div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
-                {formatINR(pureDebtSummary.totalMonthlyEmi)}
-              </p>
-              <span className="text-xs text-slate-500">Loans, EMIs, Chits & Card Minimums</span>
-            </div>
-
-            <div className="glass-card p-5 border-amber-500/20">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-amber-500 uppercase tracking-wider">
-                  Total Debt Outstanding
+                <span className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                  Total Outstanding
                 </span>
                 <TrendingDown className="w-4 h-4 text-amber-500" />
               </div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
+              <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 mt-1">
                 {formatINR(pureDebtSummary.totalOutstanding)}
               </p>
-              <span className="text-xs text-slate-500">Principal balance across all lenders</span>
+              <span className="text-[11px] text-slate-400">Total remaining principal balance</span>
             </div>
 
-            <div className="glass-card p-5 border-brand-500/20">
+            {/* Total Monthly EMIs */}
+            <div className="glass-card p-4 border-rose-500/20 bg-gradient-to-br from-rose-50/10 to-transparent">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-brand-500 uppercase tracking-wider">
-                  Pure Debt DTI Ratio
+                <span className="text-[11px] font-extrabold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+                  Monthly EMI Outflow
                 </span>
-                <Percent className="w-4 h-4 text-brand-500" />
+                <Calendar className="w-4 h-4 text-rose-500" />
               </div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
-                {pureDebtSummary.debtToIncomeRatio.toFixed(1)}%
+              <p className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
+                {formatINR(pureDebtSummary.totalMonthlyEmi)}
               </p>
-              <span className="text-xs text-slate-500">
-                {pureDebtSummary.debtToIncomeRatio <= 50 ? '✓ Within manageable limit (<50%)' : '⚠ High leverage (>50%)'}
+              <span className="text-[11px] text-slate-400">Across {pureDebts.length} active commitments</span>
+            </div>
+
+            {/* Total Remaining EMIs Count */}
+            <div className="glass-card p-4 border-indigo-500/20 bg-gradient-to-br from-indigo-50/10 to-transparent">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                  Remaining EMIs Count
+                </span>
+                <Clock className="w-4 h-4 text-indigo-500" />
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
+                {pureDebtSummary.totalRemainingEmis} EMIs Left
+              </p>
+              <span className="text-[11px] text-slate-400">Total installments remaining to pay</span>
+            </div>
+
+            {/* Total Paid Off */}
+            <div className="glass-card p-4 border-emerald-500/20 bg-gradient-to-br from-emerald-50/10 to-transparent">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                  Total Repaid So Far
+                </span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                {formatINR(pureDebtSummary.totalPaid)}
+              </p>
+              <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold">
+                {pureDebtSummary.overallProgressPercentage.toFixed(0)}% Paid of {formatINR(pureDebtSummary.totalOriginal)}
               </span>
             </div>
 
-            <div className="glass-card p-5 border-emerald-500/20">
+            {/* Expected Debt-Free Date */}
+            <div className="glass-card p-4 border-purple-500/20 bg-gradient-to-br from-purple-50/10 to-transparent sm:col-span-2 lg:col-span-1">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">
-                  Free Cashflow After All Debts
+                <span className="text-[11px] font-extrabold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                  Target Debt-Free Date
                 </span>
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <Award className="w-4 h-4 text-purple-500" />
               </div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">
-                {formatINR(freeCashflow)}
+              <p className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">
+                {pureDebtSummary.projectedDebtFreeDate ? format(parseISO(pureDebtSummary.projectedDebtFreeDate), 'MMM yyyy') : 'Oct 2027'}
               </p>
-              <span className="text-xs text-slate-500">Left for savings & discretionary spends</span>
+              <span className="text-[11px] text-slate-400">
+                {pureDebtSummary.maxRemainingMonths} months to complete freedom!
+              </span>
             </div>
           </div>
 
@@ -892,21 +937,36 @@ export const DebtsPage: React.FC = () => {
                 .map((debt) => {
                   const config = DEBT_TYPE_CONFIG[debt.type] || DEBT_TYPE_CONFIG.OTHER_OUTGOING;
                   const Icon = config.icon;
-                  const paidAmount = Math.max(0, debt.originalAmount - debt.outstandingAmount);
-                  const progressPct = debt.originalAmount > 0 ? (paidAmount / debt.originalAmount) * 100 : 0;
+                  const emi = calculateEmiDetails(debt);
 
                   return (
-                    <div key={debt.id} className="glass-card p-5 space-y-4 hover:shadow-lg transition-shadow flex flex-col justify-between border border-slate-200 dark:border-slate-800">
+                    <div
+                      key={debt.id}
+                      className="glass-card p-5 space-y-3.5 hover:shadow-xl transition-all flex flex-col justify-between border border-slate-200 dark:border-slate-800 relative overflow-hidden group"
+                    >
+                      {/* Top Accent Stripe based on urgency */}
+                      <div
+                        className={`absolute top-0 inset-x-0 h-1 ${
+                          emi.remainingEmis === 1
+                            ? 'bg-amber-500'
+                            : emi.remainingEmis === 0
+                            ? 'bg-emerald-500'
+                            : 'bg-brand-500'
+                        }`}
+                      />
+
                       <div>
                         {/* Top Bar */}
                         <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2.5">
+                          <div className="flex items-start gap-2.5 min-w-0">
                             <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
                               <Icon className={`w-5 h-5 ${config.color}`} />
                             </div>
-                            <div>
-                              <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug">{debt.name}</h4>
-                              <p className="text-[11px] text-slate-400 mt-0.5">
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug truncate">
+                                {debt.name}
+                              </h4>
+                              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
                                 {debt.lender}
                                 {debt.interestRate > 0 && <span> • {debt.interestRate}% p.a.</span>}
                               </p>
@@ -918,26 +978,82 @@ export const DebtsPage: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* Amount Box */}
-                        <div className="mt-3.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-                          <span className="text-xs text-slate-500 font-medium">Monthly EMI / Due:</span>
-                          <span className="text-base font-extrabold text-brand-600 dark:text-brand-400">
+                        {/* Remaining EMIs Highlight Badge */}
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <span
+                            className={`text-xs font-black px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm ${
+                              emi.remainingEmis === 1
+                                ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border border-amber-400/40'
+                                : emi.remainingEmis === 0
+                                ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 border border-emerald-400/40'
+                                : 'bg-indigo-50 text-indigo-900 dark:bg-indigo-950/70 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800'
+                            }`}
+                          >
+                            <Clock className="w-3.5 h-3.5" />
+                            {emi.remainingEmis === 1
+                              ? `🔥 FINAL EMI LEFT (${emi.paidEmis} of ${emi.totalEmis} Paid)`
+                              : emi.remainingEmis === 0
+                              ? `✓ FULLY SETTLED & PAID`
+                              : `⏳ ${emi.remainingEmis} EMIs Left (${emi.paidEmis} of ${emi.totalEmis} Paid)`}
+                          </span>
+
+                          <span className="text-[11px] font-bold text-slate-400">
+                            {emi.progressPercentage.toFixed(0)}% Paid
+                          </span>
+                        </div>
+
+                        {/* Monthly EMI Amount Box */}
+                        <div className="mt-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+                          <span className="text-xs text-slate-500 font-medium">Monthly Installment:</span>
+                          <span className="text-base font-black text-brand-600 dark:text-brand-400">
                             {formatINR(debt.monthlyEmi)}/mo
                           </span>
                         </div>
+
+                        {/* 3-Column Totals Breakdown (Original Total | Paid So Far | Remaining Due) */}
+                        <div className="grid grid-cols-3 gap-2 mt-2.5 p-2.5 rounded-2xl bg-slate-100/70 dark:bg-slate-800/40 text-center border border-slate-200/40 dark:border-slate-700/40">
+                          <div>
+                            <span className="block text-[10px] font-bold text-slate-400 uppercase">Total Loan</span>
+                            <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                              {formatINR(debt.originalAmount)}
+                            </span>
+                            <span className="block text-[9px] text-slate-400 font-semibold">{emi.totalEmis} EMIs</span>
+                          </div>
+
+                          <div className="border-x border-slate-200 dark:border-slate-700/60 px-1">
+                            <span className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Paid Total</span>
+                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                              {formatINR(emi.paidAmount)}
+                            </span>
+                            <span className="block text-[9px] text-emerald-600/80 font-semibold">{emi.paidEmis} Paid</span>
+                          </div>
+
+                          <div>
+                            <span className="block text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase">Remaining</span>
+                            <span className="text-xs font-black text-rose-600 dark:text-rose-400">
+                              {formatINR(debt.outstandingAmount)}
+                            </span>
+                            <span className="block text-[9px] text-rose-600/80 font-semibold">{emi.remainingEmis} Left</span>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Progress bar */}
-                      <div>
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 font-medium">
-                          <span>Paid: {formatINR(paidAmount)}</span>
-                          <span>Remaining: {formatINR(debt.outstandingAmount)}</span>
-                        </div>
+                      {/* Progress bar with completion date */}
+                      <div className="space-y-1 pt-1">
                         <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-brand-500 to-emerald-500 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(100, Math.max(5, progressPct))}%` }}
+                            className="h-full bg-gradient-to-r from-brand-500 via-indigo-500 to-emerald-500 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.max(5, emi.progressPercentage))}%` }}
                           />
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                          <span>Progress: {emi.progressPercentage.toFixed(0)}%</span>
+                          <span>
+                            {emi.projectedPayoffDate
+                              ? `Payoff: ${format(parseISO(emi.projectedPayoffDate), 'MMM yyyy')}`
+                              : 'Settled'}
+                          </span>
                         </div>
                       </div>
 
@@ -948,7 +1064,7 @@ export const DebtsPage: React.FC = () => {
                           {debt.id === 'debt_travel_emi'
                             ? 'Due on 2nd Oct (Final EMI)'
                             : debt.id === 'debt_personal_loan_3m'
-                            ? 'Sept EMI Paid (Next Due: 7th Oct)'
+                            ? 'Sept EMI Paid (Next: 7th Oct)'
                             : `Due on ${debt.dueDay}th of month`}
                         </span>
 
@@ -1694,6 +1810,35 @@ export const DebtsPage: React.FC = () => {
                     value={dueDay}
                     onChange={(e) => setDueDay(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30">
+                <div>
+                  <label className="block font-semibold text-indigo-900 dark:text-indigo-300 mb-1">
+                    Total Tenure (Total EMIs)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 24 (Months)"
+                    value={totalTenureMonths}
+                    onChange={(e) => setTotalTenureMonths(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-indigo-900 dark:text-indigo-300 mb-1">
+                    EMIs Already Paid
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 10 (Paid)"
+                    value={emisPaid}
+                    onChange={(e) => setEmisPaid(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 font-medium"
                   />
                 </div>
               </div>

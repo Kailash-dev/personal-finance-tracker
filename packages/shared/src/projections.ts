@@ -94,29 +94,128 @@ export function calculateGoalProjection(goal: Goal, currentDate: Date = new Date
   };
 }
 
+export interface EmiDetailsResult {
+  totalEmis: number;
+  paidEmis: number;
+  remainingEmis: number;
+  originalAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  monthlyEmi: number;
+  progressPercentage: number;
+  projectedPayoffDate?: string;
+  isCompleted: boolean;
+}
+
+/**
+ * Calculates accurate EMI count, remaining EMIs, and completion breakdown for a debt/loan
+ */
+export function calculateEmiDetails(debt: Debt, currentDate: Date = new Date()): EmiDetailsResult {
+  const monthlyEmi = debt.monthlyEmi || 0;
+  const originalAmount = debt.originalAmount || 0;
+  const outstandingAmount = Math.max(0, debt.outstandingAmount || 0);
+  const paidAmount = Math.max(0, originalAmount - outstandingAmount);
+
+  // Derive total EMIs: explicit totalTenureMonths OR estimated from amounts
+  let totalEmis = debt.totalTenureMonths || (monthlyEmi > 0 ? Math.max(1, Math.round(originalAmount / monthlyEmi)) : 1);
+  
+  // Derive remaining EMIs: explicit emisRemaining OR calculated from outstanding
+  let remainingEmis = debt.emisRemaining !== undefined
+    ? debt.emisRemaining
+    : (monthlyEmi > 0 ? Math.max(0, Math.ceil(outstandingAmount / monthlyEmi)) : 0);
+
+  // If outstanding is 0, remaining EMIs is 0
+  if (outstandingAmount === 0) {
+    remainingEmis = 0;
+  }
+
+  // Derive paid EMIs
+  let paidEmis = debt.emisPaid !== undefined ? debt.emisPaid : Math.max(0, totalEmis - remainingEmis);
+  if (paidEmis + remainingEmis > totalEmis) {
+    totalEmis = paidEmis + remainingEmis;
+  }
+
+  const progressPercentage = originalAmount > 0
+    ? Math.min(100, (paidAmount / originalAmount) * 100)
+    : (outstandingAmount === 0 ? 100 : 0);
+
+  let projectedPayoffDate: string | undefined;
+  if (remainingEmis > 0) {
+    const proj = new Date(currentDate);
+    proj.setMonth(proj.getMonth() + remainingEmis);
+    projectedPayoffDate = proj.toISOString().split('T')[0];
+  }
+
+  return {
+    totalEmis,
+    paidEmis,
+    remainingEmis,
+    originalAmount,
+    paidAmount,
+    outstandingAmount,
+    monthlyEmi,
+    progressPercentage,
+    projectedPayoffDate,
+    isCompleted: outstandingAmount === 0 || remainingEmis === 0,
+  };
+}
+
 export interface DebtSummaryResult {
+  totalOriginal: number;
   totalOutstanding: number;
+  totalPaid: number;
   totalMonthlyEmi: number;
+  totalRemainingEmis: number;
+  maxRemainingMonths: number;
+  overallProgressPercentage: number;
   debtToIncomeRatio: number; // Percentage
   estimatedPayoffMonths: number;
+  projectedDebtFreeDate?: string;
   debtsCount: number;
 }
 
 /**
- * Calculates debt metrics and Debt-to-Income (DTI) ratio
+ * Calculates debt metrics, total EMIs count, and Debt-to-Income (DTI) ratio
  */
-export function calculateDebtSummary(debts: Debt[], monthlyIncome: number): DebtSummaryResult {
-  const totalOutstanding = debts.reduce((sum, d) => sum + d.outstandingAmount, 0);
-  const totalMonthlyEmi = debts.reduce((sum, d) => sum + d.monthlyEmi, 0);
+export function calculateDebtSummary(debts: Debt[], monthlyIncome: number, currentDate: Date = new Date()): DebtSummaryResult {
+  const totalOriginal = debts.reduce((sum, d) => sum + (d.originalAmount || 0), 0);
+  const totalOutstanding = debts.reduce((sum, d) => sum + (d.outstandingAmount || 0), 0);
+  const totalPaid = Math.max(0, totalOriginal - totalOutstanding);
+  const totalMonthlyEmi = debts.reduce((sum, d) => sum + (d.monthlyEmi || 0), 0);
 
+  let totalRemainingEmis = 0;
+  let maxRemainingMonths = 0;
+
+  for (const d of debts) {
+    const emiInfo = calculateEmiDetails(d, currentDate);
+    totalRemainingEmis += emiInfo.remainingEmis;
+    if (emiInfo.remainingEmis > maxRemainingMonths) {
+      maxRemainingMonths = emiInfo.remainingEmis;
+    }
+  }
+
+  const overallProgressPercentage = totalOriginal > 0 ? (totalPaid / totalOriginal) * 100 : 0;
   const debtToIncomeRatio = monthlyIncome > 0 ? (totalMonthlyEmi / monthlyIncome) * 100 : 0;
-  const estimatedPayoffMonths = totalMonthlyEmi > 0 ? Math.ceil(totalOutstanding / totalMonthlyEmi) : 0;
+  const estimatedPayoffMonths = maxRemainingMonths || (totalMonthlyEmi > 0 ? Math.ceil(totalOutstanding / totalMonthlyEmi) : 0);
+
+  let projectedDebtFreeDate: string | undefined;
+  if (estimatedPayoffMonths > 0) {
+    const dDate = new Date(currentDate);
+    dDate.setMonth(dDate.getMonth() + estimatedPayoffMonths);
+    projectedDebtFreeDate = dDate.toISOString().split('T')[0];
+  }
 
   return {
+    totalOriginal,
     totalOutstanding,
+    totalPaid,
     totalMonthlyEmi,
+    totalRemainingEmis,
+    maxRemainingMonths,
+    overallProgressPercentage,
     debtToIncomeRatio,
     estimatedPayoffMonths,
+    projectedDebtFreeDate,
     debtsCount: debts.length,
   };
 }
