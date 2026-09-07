@@ -733,6 +733,24 @@ export const DebtsPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Sorting and Filter Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Order Outgoings By:
+              </span>
+              <div className="flex items-center bg-white dark:bg-slate-900 rounded-xl p-0.5 border border-slate-200 dark:border-slate-700 text-xs font-semibold">
+                <span className="px-3 py-1 bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 rounded-lg flex items-center gap-1.5 font-bold">
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>Calendar Timeline (9th → 10th → 12th → 15th → 25th → 28th → Oct 2nd)</span>
+                </span>
+              </div>
+            </div>
+            <span className="text-xs text-slate-400 font-medium">
+              {debts.length} active monthly outgoings
+            </span>
+          </div>
+
           {/* Outgoings Cards Grid */}
           {debts.length === 0 ? (
             <div className="glass-card p-12 text-center space-y-4">
@@ -764,7 +782,24 @@ export const DebtsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {debts
                 .slice()
-                .sort((a, b) => a.dueDay - b.dueDay)
+                .sort((a, b) => {
+                  const getRank = (d: Debt) => {
+                    if (d.id === 'debt_ram_fincorp') return 9.0;
+                    if (d.id === 'debt_bike_emi') return 10.1;
+                    if (d.id === 'debt_vc2_10th') return 10.2;
+                    if (d.id === 'debt_broker_fee') return 10.3;
+                    if (d.id === 'debt_wife_allowance') return 10.4;
+                    if (d.id === 'debt_bajaj_mobile') return 12.0;
+                    if (d.id === 'debt_axis_settlement') return 15.1;
+                    if (d.id === 'debt_groceries') return 15.2;
+                    if (d.id === 'debt_vc2_25th') return 25.0;
+                    if (d.id === 'debt_sbi_card') return 28.0;
+                    if (d.id === 'debt_travel_emi') return 32.0;
+                    if (d.id === 'debt_personal_loan_3m') return 35.0;
+                    return d.dueDay || 50;
+                  };
+                  return getRank(a) - getRank(b);
+                })
                 .map((debt) => {
                   const config = DEBT_TYPE_CONFIG[debt.type] || DEBT_TYPE_CONFIG.OTHER_OUTGOING;
                   const Icon = config.icon;
@@ -822,7 +857,12 @@ export const DebtsPage: React.FC = () => {
                       {/* Bottom details & Actions */}
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
                         <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold text-[11px]">
-                          <Calendar className="w-3.5 h-3.5" /> Due on {debt.dueDay}th
+                          <Calendar className="w-3.5 h-3.5" />
+                          {debt.id === 'debt_travel_emi'
+                            ? 'Due on 2nd Oct (Final EMI)'
+                            : debt.id === 'debt_personal_loan_3m'
+                            ? 'Sept EMI Paid (Next Due: 7th Oct)'
+                            : `Due on ${debt.dueDay}th of month`}
                         </span>
 
                         <div className="flex items-center gap-1.5">
@@ -945,7 +985,18 @@ export const DebtsPage: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {borrowings.map((b) => {
+              {borrowings
+                .slice()
+                .sort((a, b) => {
+                  const getBRank = (item: Borrowing) => {
+                    if (item.status === 'SETTLED') return 100;
+                    if (item.carryForwardMonth && item.carryForwardMonth > '2026-09') return 50;
+                    if (item.dueDate?.includes('-10')) return 10;
+                    return 20;
+                  };
+                  return getBRank(a) - getBRank(b);
+                })
+                .map((b) => {
                 const isBorrowed = b.type === 'BORROWED';
                 const isSettled = b.status === 'SETTLED';
                 const pendingAmt = Math.max(0, b.amount - b.amountSettled);

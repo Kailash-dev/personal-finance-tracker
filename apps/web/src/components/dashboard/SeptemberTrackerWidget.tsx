@@ -328,84 +328,139 @@ export const SeptemberTrackerWidget: React.FC = () => {
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
+              {/* 1. Ram Fincorp - 9th */}
               <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-500/20 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-rose-900 dark:text-rose-200 block">Ram Fincorp Loan</span>
-                  <span className="text-[10px] text-rose-600 dark:text-rose-400">Due 9th Sept (Pre-Salary)</span>
+                  <span className="font-bold text-rose-900 dark:text-rose-200 block">1. Ram Fincorp Loan</span>
+                  <span className="text-[10px] text-rose-600 dark:text-rose-400">Due 9th Sept (Pre-Salary Priority)</span>
                 </div>
                 <span className="font-extrabold text-rose-600 dark:text-rose-400 text-sm">₹16,650</span>
               </div>
 
-              <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-500/20 flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-rose-900 dark:text-rose-200 block">Rajni Ji Personal Borrowing</span>
-                  <span className="text-[10px] text-rose-600 dark:text-rose-400">Due 10th Sept (Salary Day)</span>
-                </div>
-                <span className="font-extrabold text-rose-600 dark:text-rose-400 text-sm">₹5,000</span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-500/20 flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-rose-900 dark:text-rose-200 block">Friend / Personal Hand Loan</span>
-                  <span className="text-[10px] text-rose-600 dark:text-rose-400">Due 10th Sept (Salary Day)</span>
-                </div>
-                <span className="font-extrabold text-rose-600 dark:text-rose-400 text-sm">₹5,000</span>
-              </div>
-
+              {/* 2. Bike Loan EMI - 10th */}
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 block">House Broker Fee</span>
-                  <span className="text-[10px] text-slate-500">Shifted 4th Sept • Due 10th</span>
-                </div>
-                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">₹4,100</span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 block">Bike Loan EMI</span>
-                  <span className="text-[10px] text-slate-500">Auto-Debit on 10th Sept</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 block">2. Bike Loan EMI</span>
+                  <span className="text-[10px] text-slate-500">Auto-Debit on 10th Sept (Salary Day)</span>
                 </div>
                 <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">₹6,250</span>
               </div>
 
+              {/* 3. Chit Fund VC 2 (10th) */}
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 block">Chit Fund (VC 2) 10th Installment</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 block">3. Chit Fund (VC 2) 1st EMI</span>
                   <span className="text-[10px] text-slate-500">Due 10th Sept</span>
                 </div>
                 <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">₹4,500</span>
               </div>
 
+              {/* 4. House Broker Fee - 10th */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 block">4. House Broker Fee</span>
+                  <span className="text-[10px] text-slate-500">Shifted 4th Sept • Due 10th</span>
+                </div>
+                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">₹4,100</span>
+              </div>
+
+              {/* 5. Rajni Ji Hand Loan - 10th */}
+              <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-500/20 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-rose-900 dark:text-rose-200 block">5. Rajni Ji Personal Borrowing</span>
+                  <span className="text-[10px] text-rose-600 dark:text-rose-400">Due 10th Sept (Salary Day)</span>
+                </div>
+                <span className="font-extrabold text-rose-600 dark:text-rose-400 text-sm">₹5,000</span>
+              </div>
+
+              {/* 6. Friend Hand Loan - 10th */}
+              <div className="p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-500/20 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-rose-900 dark:text-rose-200 block">6. Friend / Hand Loan</span>
+                  <span className="text-[10px] text-rose-600 dark:text-rose-400">Due 10th Sept (Salary Day)</span>
+                </div>
+                <span className="font-extrabold text-rose-600 dark:text-rose-400 text-sm">₹5,000</span>
+              </div>
+
+              {/* 7. Wife & Family Allowance - 10th */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 block">7. Wife & Household Allowance</span>
+                  <span className="text-[10px] text-slate-500">Living allowance on 10th Sept</span>
+                </div>
+                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">₹7,000</span>
+              </div>
+
+              {/* 8. Bajaj Mobile EMI - 12th */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 block">8. Bajaj Finserv Mobile EMI</span>
+                  <span className="text-[10px] text-slate-500">Auto-Debit on 12th Sept</span>
+                </div>
+                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">₹3,800</span>
+              </div>
+
+              {/* 9. Axis CC Settlement - 15th */}
               <div className="p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-500/20 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-emerald-900 dark:text-emerald-200 block">Axis CC Settlement (Final 3 of 3)</span>
-                  <span className="text-[10px] text-emerald-600 font-bold">Due 15th Sept • Card CLOSES!</span>
+                  <span className="font-bold text-emerald-900 dark:text-emerald-200 block">9. Axis CC Final Settlement (3 of 3)</span>
+                  <span className="text-[10px] text-emerald-600 font-bold">Due 15th Sept • Card CLOSES Forever!</span>
                 </div>
                 <span className="font-extrabold text-emerald-600 text-sm">₹1,400</span>
               </div>
 
+              {/* 10. DMart Groceries - 15th */}
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 block">Chit Fund (VC 2) 25th Installment</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 block">10. DMart Groceries & Provisions</span>
+                  <span className="text-[10px] text-slate-500">Food essentials around 15th Sept</span>
+                </div>
+                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">₹4,000</span>
+              </div>
+
+              {/* 11. Chit Fund VC 2 (25th) */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 block">11. Chit Fund (VC 2) 2nd EMI</span>
                   <span className="text-[10px] text-slate-500">Due 25th Sept</span>
                 </div>
                 <span className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">₹9,500</span>
               </div>
 
+              {/* 12. SBI Card Min Due - 28th */}
               <div className="p-3 rounded-xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-500/20 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-purple-900 dark:text-purple-200 block">SBI Credit Card Minimum Due</span>
+                  <span className="font-bold text-purple-900 dark:text-purple-200 block">12. SBI Credit Card Minimum Due</span>
                   <span className="text-[10px] text-purple-600 font-semibold">Due 28th Sept</span>
                 </div>
                 <span className="font-extrabold text-purple-600 text-sm">₹12,108</span>
               </div>
 
+              {/* 13. Travel Loan EMI - 2nd Oct */}
+              <div className="p-3 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-500/20 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-indigo-900 dark:text-indigo-200 block">13. Travel Loan EMI (Final)</span>
+                  <span className="text-[10px] text-indigo-600 font-bold">Ends Permanently on 2nd Oct!</span>
+                </div>
+                <span className="font-extrabold text-indigo-600 text-sm">₹2,500 (Oct 2)</span>
+              </div>
+
+              {/* 14. Relocation Borrowing (Carried to Oct) */}
               <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-500/25 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-amber-900 dark:text-amber-200 block">Relocation Hand Loan (Deferred)</span>
+                  <span className="font-bold text-amber-900 dark:text-amber-200 block">14. Relocation Hand Loan (Deferred)</span>
                   <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold">Carried Forward to October 2026</span>
                 </div>
                 <span className="font-extrabold text-amber-700 dark:text-amber-300 text-sm">₹10,000 (Oct)</span>
+              </div>
+
+              {/* 15. Short-Term Personal Loan (Paid 7th Sept) */}
+              <div className="p-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-500/20 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-emerald-900 dark:text-emerald-200 block">15. Personal Loan EMI (2 of 3)</span>
+                  <span className="text-[10px] text-emerald-600 font-bold">✓ Paid on 7th Sept • 1 EMI Left in Oct</span>
+                </div>
+                <span className="font-extrabold text-emerald-600 text-sm">₹7,000 (PAID)</span>
               </div>
             </div>
           </div>

@@ -51,7 +51,7 @@ class StorageService {
   private initDefaults() {
     if (typeof window === 'undefined') return;
 
-    if (!localStorage.getItem('rupeetrack_kailash_finplan_v4')) {
+    if (!localStorage.getItem('rupeetrack_kailash_finplan_v5')) {
       this.seedKailashFinanceData();
       return;
     }
@@ -268,7 +268,71 @@ class StorageService {
         interestRate: 0,
         startDate: '2026-06-12',
         dueDay: 12,
-        notes: 'Mobile phone no-cost EMI on Bajaj Finserv',
+        notes: 'Mobile phone no-cost EMI on Bajaj Finserv (Auto-debit on 12th)',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_axis_settlement',
+        userId: 'user_kailash',
+        name: 'Axis Bank CC Settlement (Final 3 of 3)',
+        lender: 'Axis Bank Collections',
+        type: 'CREDIT_CARD_MIN_PAYMENT',
+        originalAmount: 4200,
+        outstandingAmount: 1400,
+        monthlyEmi: 1400,
+        interestRate: 0,
+        startDate: '2026-07-15',
+        dueDay: 15,
+        notes: '3 installments of ₹1,400: 2 paid! 1 remaining on 15th Sept to close card forever!',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_groceries',
+        userId: 'user_kailash',
+        name: 'Monthly Groceries & DMart',
+        lender: 'D-Mart / Blinkit',
+        type: 'GROCERIES_FOOD',
+        originalAmount: 4000,
+        outstandingAmount: 4000,
+        monthlyEmi: 4000,
+        interestRate: 0,
+        startDate: '2026-09-01',
+        dueDay: 15,
+        notes: 'Essential groceries & food supplies for September (Mid-month ~15th)',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_vc2_25th',
+        userId: 'user_kailash',
+        name: 'Chit Fund (VC 2) 25th Installment',
+        lender: 'Local Chit Group',
+        type: 'CHIT_FUND_VC',
+        originalAmount: 100000,
+        outstandingAmount: 47500,
+        monthlyEmi: 9500,
+        interestRate: 0,
+        startDate: '2026-04-25',
+        dueDay: 25,
+        notes: 'Chit fund second installment due on 25th Sept',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_sbi_card',
+        userId: 'user_kailash',
+        name: 'SBI Credit Card Minimum Due',
+        lender: 'SBI Card',
+        type: 'CREDIT_CARD_MIN_PAYMENT',
+        originalAmount: 45000,
+        outstandingAmount: 38000,
+        monthlyEmi: 12108,
+        interestRate: 42.0,
+        startDate: '2025-01-01',
+        dueDay: 28,
+        notes: 'SBI Credit Card minimum due for September (Due 28th)',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -283,8 +347,24 @@ class StorageService {
         monthlyEmi: 2500,
         interestRate: 12.0,
         startDate: '2026-04-02',
-        dueDay: 2,
+        dueDay: 30,
         notes: 'Travel EMI ends permanently on 2nd Oct (Last EMI remaining)!',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'debt_personal_loan_3m',
+        userId: 'user_kailash',
+        name: 'Short-Term Personal Loan (2 of 3 Paid)',
+        lender: 'NBFC / Bank',
+        type: 'PERSONAL_LOAN',
+        originalAmount: 21000,
+        outstandingAmount: 7000,
+        monthlyEmi: 7000,
+        interestRate: 14.0,
+        startDate: '2026-07-07',
+        dueDay: 7,
+        notes: '3-month short term loan. 2 EMIs paid (today 7th Sept paid ₹7,000). Only 1 EMI left next month!',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -300,7 +380,7 @@ class StorageService {
         interestRate: 0,
         startDate: '2026-09-04',
         dueDay: 10,
-        notes: 'Broker fee for new house shifted on 4th Sept (Due on Salary Day)',
+        notes: 'Broker fee for new house shifted on 4th Sept (Due on Salary Day 10th)',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -316,29 +396,27 @@ class StorageService {
         interestRate: 0,
         startDate: '2026-09-01',
         dueDay: 10,
-        notes: 'Wife personal and household allowance for September',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: 'debt_groceries',
-        userId: 'user_kailash',
-        name: 'Monthly Groceries & Provisions',
-        lender: 'D-Mart / Blinkit',
-        type: 'GROCERIES_FOOD',
-        originalAmount: 4000,
-        outstandingAmount: 4000,
-        monthlyEmi: 4000,
-        interestRate: 0,
-        startDate: '2026-09-01',
-        dueDay: 10,
-        notes: 'Essential groceries & food supplies for September',
+        notes: 'Wife personal and household allowance for September (Paid 10th)',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
     ];
 
     const borrowings: Borrowing[] = [
+      {
+        id: 'bor_rajni_5k',
+        userId: 'user_kailash',
+        personName: 'Rajni Ji Personal Borrowing',
+        amount: 5000,
+        amountSettled: 0,
+        borrowDate: '2026-09-04',
+        dueDate: '2026-09-10',
+        type: 'BORROWED',
+        status: 'PENDING',
+        purpose: 'Personal borrowing to repay on 10th Sept (Salary Day)',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
       {
         id: 'bor_friend_5k',
         userId: 'user_kailash',
@@ -354,20 +432,6 @@ class StorageService {
         updatedAt: new Date().toISOString(),
       },
       {
-        id: 'bor_rajni_5k',
-        userId: 'user_kailash',
-        personName: 'Rajni Ji',
-        amount: 5000,
-        amountSettled: 0,
-        borrowDate: '2026-09-04',
-        dueDate: '2026-09-10',
-        type: 'BORROWED',
-        status: 'PENDING',
-        purpose: 'Personal borrowing to repay on 10th Sept',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
         id: 'bor_relocation_10k',
         userId: 'user_kailash',
         personName: 'City Relocation Hand Loan',
@@ -375,6 +439,7 @@ class StorageService {
         amountSettled: 0,
         borrowDate: '2026-09-04',
         dueDate: '2026-10-10',
+        carryForwardMonth: '2026-10',
         type: 'BORROWED',
         status: 'PENDING',
         purpose: 'Shifted to new city on 4th Sept - to be paid in October',
@@ -383,7 +448,7 @@ class StorageService {
       },
     ];
 
-        const transactions: Transaction[] = [
+    const transactions: Transaction[] = [
       {
             "id": "tx_kotak_1",
             "userId": "user_kailash",
@@ -3270,7 +3335,7 @@ class StorageService {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
     localStorage.setItem(STORAGE_KEYS.BUDGETS, JSON.stringify(budgets));
     localStorage.setItem(STORAGE_KEYS.RULES, JSON.stringify(DEFAULT_MERCHANT_RULES));
-    localStorage.setItem('rupeetrack_kailash_finplan_v4', 'true');
+    localStorage.setItem('rupeetrack_kailash_finplan_v5', 'true');
   }
 
   // --- USER ---
@@ -3382,7 +3447,13 @@ class StorageService {
       );
     }
 
-    return txns.sort((a, b) => b.date.localeCompare(a.date));
+    return txns.sort((a, b) => {
+      const dateCmp = b.date.localeCompare(a.date);
+      if (dateCmp !== 0) return dateCmp;
+      const numA = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
+      return numB - numA;
+    });
   }
 
   createTransaction(txData: {
