@@ -242,6 +242,25 @@ class StorageService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
+      {
+        id: 'debt_slice_bnpl',
+        userId: 'user_kailash',
+        name: 'Slice (Card / Borrow)',
+        lender: 'Slice (GaragePreneurs / Quadrant)',
+        type: 'BNPL',
+        originalAmount: 19000,
+        outstandingAmount: 19000,
+        monthlyEmi: 19000,
+        interestRate: 0,
+        totalTenureMonths: 1,
+        emisPaid: 0,
+        emisRemaining: 1,
+        startDate: '2026-09-01',
+        dueDay: 5,
+        notes: 'Slice Borrow / Card pending repayment',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     ];
 
     const EXACT_USER_BORROWINGS: Borrowing[] = [
@@ -261,7 +280,7 @@ class StorageService {
       },
     ];
 
-    const USER_CONFIG_KEY = 'rupeetrack_user_exact_debts_v12';
+    const USER_CONFIG_KEY = 'rupeetrack_user_exact_debts_v13';
     if (!localStorage.getItem(USER_CONFIG_KEY)) {
       localStorage.setItem(STORAGE_KEYS.DEBTS, JSON.stringify(EXACT_USER_DEBTS));
       localStorage.setItem(STORAGE_KEYS.BORROWINGS, JSON.stringify(EXACT_USER_BORROWINGS));

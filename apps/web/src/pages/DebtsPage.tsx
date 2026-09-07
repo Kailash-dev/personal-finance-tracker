@@ -849,7 +849,16 @@ export const DebtsPage: React.FC = () => {
               <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
                 1-Click Quick Presets:
               </span>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('BNPL', 'Slice (Card / Borrow)', 'Slice (GaragePreneurs)', '19000', 1, 0)}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-purple-500/30 bg-purple-50/60 dark:bg-purple-950/30 hover:bg-purple-100/60 text-xs font-semibold text-purple-900 dark:text-purple-200 transition-colors"
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                  <span className="truncate">+ Slice (₹19k)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => openPresetModal('BNPL', 'Simpl PayLater', 'Simpl BNPL', '4500', 1, 0)}
