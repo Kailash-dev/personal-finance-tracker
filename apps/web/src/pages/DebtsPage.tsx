@@ -341,26 +341,28 @@ export const DebtsPage: React.FC = () => {
 
   const handleAddDebt = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !lender || (!monthlyEmi && !cardMinDue)) return;
+    if (!name.trim()) return;
 
     try {
       const isCard = type === 'CREDIT_CARD_MIN_PAYMENT';
+      const effectiveLender = lender.trim() || name.trim() || (isCard ? 'Credit Card' : 'BNPL / Lender');
       const totalDueNum = isCard && cardTotalDue ? parseFloat(cardTotalDue) : undefined;
       const minDueNum = isCard && (cardMinDue || monthlyEmi) ? parseFloat(cardMinDue || monthlyEmi) : undefined;
       const limitNum = isCard && cardLimit ? parseFloat(cardLimit) : undefined;
       const stmtDayNum = isCard && cardStatementDate ? parseInt(cardStatementDate, 10) : undefined;
 
-      const emiNum = isCard && minDueNum ? minDueNum : (parseFloat(monthlyEmi) || 0);
-      const tenureNum = parseInt(totalTenureMonths, 10) || Math.max(1, Math.round((parseFloat(originalAmount) || emiNum * 12) / (emiNum || 1)));
+      const fallbackAmount = parseFloat(outstandingAmount) || parseFloat(originalAmount) || parseFloat(cardTotalDue) || 0;
+      const emiNum = isCard && minDueNum ? minDueNum : (parseFloat(monthlyEmi) || fallbackAmount);
+      const tenureNum = parseInt(totalTenureMonths, 10) || (emiNum > 0 ? Math.max(1, Math.round((parseFloat(originalAmount) || emiNum) / emiNum)) : 1);
       const paidNum = parseInt(emisPaid, 10) || 0;
       const remNum = Math.max(0, tenureNum - paidNum);
-      const orig = isCard && totalDueNum ? totalDueNum : (parseFloat(originalAmount) || emiNum * tenureNum);
-      const out = isCard && totalDueNum ? totalDueNum : (parseFloat(outstandingAmount) || emiNum * remNum);
+      const orig = isCard && totalDueNum ? totalDueNum : (parseFloat(originalAmount) || (emiNum * tenureNum) || fallbackAmount);
+      const out = isCard && totalDueNum ? totalDueNum : (parseFloat(outstandingAmount) || (emiNum * remNum) || fallbackAmount);
 
       await dataProvider.createDebt({
         userId: authUser?.id || user?.id || 'user_1',
-        name,
-        lender,
+        name: name.trim(),
+        lender: effectiveLender,
         type,
         originalAmount: orig,
         outstandingAmount: out,
@@ -850,56 +852,56 @@ export const DebtsPage: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                 <button
                   type="button"
-                  onClick={() => openPresetModal('BIKE_LOAN', 'Bike Loan Monthly EMI', 'Hero Fincorp / HDFC', '6250', 36, 30)}
-                  className="flex items-center gap-1.5 p-2 rounded-xl border border-rose-500/30 bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100/60 text-xs font-semibold text-rose-900 dark:text-rose-200 transition-colors"
-                >
-                  <Bike className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                  <span className="truncate">+ Bike EMI (36m)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => openPresetModal('PERSONAL_LOAN', 'Mobile Phone EMI (Bajaj Finserv)', 'Bajaj Finance', '3800', 24, 1)}
-                  className="flex items-center gap-1.5 p-2 rounded-xl border border-blue-500/30 bg-blue-50/60 dark:bg-blue-950/30 hover:bg-blue-100/60 text-xs font-semibold text-blue-900 dark:text-blue-200 transition-colors"
-                >
-                  <CreditCard className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  <span className="truncate">+ Mobile EMI (24m)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => openPresetModal('PERSONAL_BORROWING', 'Money Borrowed on Interest', 'Private Lender', '2000', 12, 0)}
+                  onClick={() => openPresetModal('BNPL', 'Simpl PayLater', 'Simpl BNPL', '4500', 1, 0)}
                   className="flex items-center gap-1.5 p-2 rounded-xl border border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-100/60 text-xs font-semibold text-emerald-900 dark:text-emerald-200 transition-colors"
                 >
-                  <HandCoins className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span className="truncate">+ Borrowed on Interest</span>
+                  <ShoppingCart className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span className="truncate">+ Simpl (₹4.5k)</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', "Father's Credit Card (Bill / EMI)", 'Credit Card (Father)', '5000', 5, 0)}
-                  className="flex items-center gap-1.5 p-2 rounded-xl border border-purple-500/30 bg-purple-50/60 dark:bg-purple-950/30 hover:bg-purple-100/60 text-xs font-semibold text-purple-900 dark:text-purple-200 transition-colors"
-                >
-                  <CreditCard className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                  <span className="truncate">+ Father's Card</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => openPresetModal('NBFC_LOAN', 'NBFC FinTech Loan', 'NBFC Lender (KreditBee/Navi)', '3000', 10, 0)}
-                  className="flex items-center gap-1.5 p-2 rounded-xl border border-amber-600/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
-                >
-                  <Landmark className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span className="truncate">+ NBFC Loan</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => openPresetModal('BNPL', 'Buy Now Pay Later (BNPL)', 'LazyPay / Simpl / Amazon', '4000', 3, 0)}
+                  onClick={() => openPresetModal('BNPL', 'LazyPay BNPL', 'PayU / LazyPay', '15000', 1, 0)}
                   className="flex items-center gap-1.5 p-2 rounded-xl border border-violet-500/30 bg-violet-50/60 dark:bg-violet-950/30 hover:bg-violet-100/60 text-xs font-semibold text-violet-900 dark:text-violet-200 transition-colors"
                 >
                   <ShoppingCart className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                  <span className="truncate">+ BNPL (Pay Later)</span>
+                  <span className="truncate">+ LazyPay (₹15k)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('NBFC_LOAN', 'Branch NBFC Loan', 'Branch International', '26000', 1, 0)}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-amber-600/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
+                >
+                  <Landmark className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span className="truncate">+ Branch (₹26k)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('NBFC_LOAN', 'mPokket Loan', 'mPokket Financial', '32000', 1, 0)}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-orange-500/30 bg-orange-50/60 dark:bg-orange-950/30 hover:bg-orange-100/60 text-xs font-semibold text-orange-900 dark:text-orange-200 transition-colors"
+                >
+                  <Landmark className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  <span className="truncate">+ mPokket (₹32k)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('BNPL', 'Snapmint PayLater / EMI', 'Snapmint BNPL', '62000', 1, 0)}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-pink-500/30 bg-pink-50/60 dark:bg-pink-950/30 hover:bg-pink-100/60 text-xs font-semibold text-pink-900 dark:text-pink-200 transition-colors"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+                  <span className="truncate">+ Snapmint (₹62k)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('BNPL', 'Freo Pay / Credit Line', 'Freo (MoneyTap)', '7000', 1, 0)}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-cyan-500/30 bg-cyan-50/60 dark:bg-cyan-950/30 hover:bg-cyan-100/60 text-xs font-semibold text-cyan-900 dark:text-cyan-200 transition-colors"
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+                  <span className="truncate">+ Freo Pay (₹7k)</span>
                 </button>
               </div>
             </div>

@@ -243,6 +243,8 @@ export const DEFAULT_MERCHANT_RULES: Omit<MerchantRule, 'id' | 'userId' | 'creat
 
   // Financial, Loans & EMIs
   { pattern: 'RAM FINCORP|FINCORP|HDFC LOAN|BAJAJ FINANCE|BAJAJ FINSERV|TATA CAPITAL|SBI LOAN|ICICI LOAN|MUTHOOT|MANAPPURAM|HOME LOAN|CAR LOAN|FULLERTON', merchantName: 'EMI / Loan Payment', categoryId: 'cat_financial', subcategoryId: 'sub_emi_personal', defaultType: 'DEBT_PAYMENT', confidenceScore: 0.98, isRegex: true },
+  { pattern: 'BRANCH|BRANCH INTL|MPOKKET|MAYANK FINANCIAL|KREDITBEE|MONEYVIEW|NAVI|RING|CASHE|SMARTCOIN', merchantName: 'NBFC FinTech Loan', categoryId: 'cat_financial', subcategoryId: 'sub_emi_personal', defaultType: 'DEBT_PAYMENT', confidenceScore: 0.98, isRegex: true },
+  { pattern: 'SIMPL|GETSIMPL|LAZYPAY|SNAPMINT|FREO|FREOPAY|MONEYTAP|ZESTMONEY|AMAZON PAY LATER|FLIPKART PAY LATER', merchantName: 'Buy Now Pay Later (BNPL)', categoryId: 'cat_financial', subcategoryId: 'sub_emi_personal', defaultType: 'DEBT_PAYMENT', confidenceScore: 0.98, isRegex: true },
   { pattern: 'SBI CARD|AXIS CARD|HDFC CARD|ICICI CARD|KOTAK CARD|CRED|CRED CLUB|PAYU/SBICARD', merchantName: 'Credit Card Bill', categoryId: 'cat_financial', subcategoryId: 'sub_cc_payment', defaultType: 'DEBT_PAYMENT', confidenceScore: 0.98, isRegex: true },
   { pattern: 'LIC|HDFC LIFE|ICICI PRUDENTIAL|MAX LIFE|STAR HEALTH|CARE HEALTH|NIVA BUPA', merchantName: 'Insurance', categoryId: 'cat_financial', subcategoryId: 'sub_insurance_life', confidenceScore: 0.95, isRegex: true },
   { pattern: 'CHIT|VC2|BC |COMMITTEE', merchantName: 'Chit Fund Contribution', categoryId: 'cat_financial', subcategoryId: 'sub_emi_personal', defaultType: 'DEBT_PAYMENT', confidenceScore: 0.95, isRegex: true },
