@@ -72,6 +72,8 @@ export type DebtType =
   | 'CAR_LOAN'
   | 'CREDIT_CARD_MIN_PAYMENT'
   | 'PERSONAL_BORROWING'
+  | 'BNPL'
+  | 'NBFC_LOAN'
   | 'HOME_LOAN'
   | 'PERSONAL_LOAN'
   | 'EDUCATION_LOAN'

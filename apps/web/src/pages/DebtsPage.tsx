@@ -152,6 +152,18 @@ const DEBT_TYPE_CONFIG: Record<
     color: 'text-cyan-500',
     badgeBg: 'bg-cyan-50 dark:bg-cyan-950/50 text-cyan-700 dark:text-cyan-300 border-cyan-500/20',
   },
+  BNPL: {
+    label: 'Buy Now Pay Later (BNPL)',
+    icon: ShoppingCart,
+    color: 'text-violet-500',
+    badgeBg: 'bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border-violet-500/20',
+  },
+  NBFC_LOAN: {
+    label: 'NBFC FinTech Loan',
+    icon: Landmark,
+    color: 'text-amber-500',
+    badgeBg: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-500/20',
+  },
   OTHER_OUTGOING: {
     label: 'Other Fixed Outgoing',
     icon: Wallet,
@@ -808,29 +820,29 @@ export const DebtsPage: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => openPresetModal('CHIT_FUND_VC', 'Chit Fund (VC 2) EMI', 'Chit Committee', '4500', 11, 6)}
-                  className="flex items-center gap-1.5 p-2 rounded-xl border border-amber-600/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
-                >
-                  <Coins className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span className="truncate">+ Chit VC 2</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'SBI Credit Card Minimum Due', 'SBI Cards', '12108', 4, 1)}
+                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', "Father's Credit Card (Bill / EMI)", 'Credit Card (Father)', '5000', 5, 0)}
                   className="flex items-center gap-1.5 p-2 rounded-xl border border-purple-500/30 bg-purple-50/60 dark:bg-purple-950/30 hover:bg-purple-100/60 text-xs font-semibold text-purple-900 dark:text-purple-200 transition-colors"
                 >
                   <CreditCard className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                  <span className="truncate">+ SBI Card Min</span>
+                  <span className="truncate">+ Father's Card</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => openPresetModal('CREDIT_CARD_MIN_PAYMENT', 'Axis CC Final Settlement', 'Axis Bank', '1400', 3, 2)}
-                  className="flex items-center gap-1.5 p-2 rounded-xl border border-teal-500/30 bg-teal-50/60 dark:bg-teal-950/30 hover:bg-teal-100/60 text-xs font-semibold text-teal-900 dark:text-teal-200 transition-colors"
+                  onClick={() => openPresetModal('NBFC_LOAN', 'NBFC FinTech Loan', 'NBFC Lender (KreditBee/Navi)', '3000', 10, 0)}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-amber-600/30 bg-amber-50/60 dark:bg-amber-950/30 hover:bg-amber-100/60 text-xs font-semibold text-amber-900 dark:text-amber-200 transition-colors"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-teal-500 shrink-0" />
-                  <span className="truncate">+ Axis Settlement</span>
+                  <Landmark className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span className="truncate">+ NBFC Loan</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openPresetModal('BNPL', 'Buy Now Pay Later (BNPL)', 'LazyPay / Simpl / Amazon', '4000', 3, 0)}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-violet-500/30 bg-violet-50/60 dark:bg-violet-950/30 hover:bg-violet-100/60 text-xs font-semibold text-violet-900 dark:text-violet-200 transition-colors"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                  <span className="truncate">+ BNPL (Pay Later)</span>
                 </button>
               </div>
             </div>
@@ -1646,10 +1658,12 @@ export const DebtsPage: React.FC = () => {
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium"
                 >
                   <option value="PERSONAL_LOAN">💼 Personal Loan (Bank / NBFC / FinTech)</option>
+                  <option value="NBFC_LOAN">🏦 NBFC FinTech Loan (KreditBee / MoneyView / Navi)</option>
+                  <option value="BNPL">🛍️ Buy Now Pay Later (LazyPay / Simpl / Amazon / Flipkart)</option>
                   <option value="BIKE_LOAN">🏍️ Bike / Two-Wheeler Loan EMI</option>
+                  <option value="CREDIT_CARD_MIN_PAYMENT">💳 Credit Card (Father's Card / SBI / Axis / HDFC)</option>
+                  <option value="PERSONAL_BORROWING">🤝 Small Borrowing / Hand Loan on Interest</option>
                   <option value="CHIT_FUND_VC">🪙 Chit Fund / VC (VC 1, VC 2, Committee)</option>
-                  <option value="CREDIT_CARD_MIN_PAYMENT">💳 Credit Card EMI / Minimum Due (SBI/Axis/HDFC)</option>
-                  <option value="PERSONAL_BORROWING">🤝 Small Borrowing / Hand Loan / Ram Fincorp</option>
                   <option value="CAR_LOAN">🚗 Car Loan EMI</option>
                   <option value="HOME_LOAN">🏠 Home Loan / Mortgage EMI</option>
                   <option value="EDUCATION_LOAN">🎓 Education Loan</option>
@@ -1801,10 +1815,12 @@ export const DebtsPage: React.FC = () => {
                   className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium text-xs"
                 >
                   <option value="PERSONAL_LOAN">💼 Personal Loan / Mobile EMI (Bajaj / NBFC)</option>
+                  <option value="NBFC_LOAN">🏦 NBFC FinTech Loan (KreditBee / MoneyView / Navi)</option>
+                  <option value="BNPL">🛍️ Buy Now Pay Later (LazyPay / Simpl / Amazon / Flipkart)</option>
                   <option value="BIKE_LOAN">🏍️ Bike / Two-Wheeler Loan EMI</option>
+                  <option value="CREDIT_CARD_MIN_PAYMENT">💳 Credit Card (Father's Card / SBI / Axis / HDFC)</option>
                   <option value="PERSONAL_BORROWING">🤝 Hand Loan / Borrowed on Interest / Private Lender</option>
                   <option value="CHIT_FUND_VC">🪙 Chit Fund / VC (VC 1, VC 2, Committee)</option>
-                  <option value="CREDIT_CARD_MIN_PAYMENT">💳 Credit Card EMI / Minimum Due (SBI/Axis/HDFC)</option>
                   <option value="CAR_LOAN">🚗 Car Loan EMI</option>
                   <option value="HOME_LOAN">🏠 Home Loan / Mortgage EMI</option>
                   <option value="EDUCATION_LOAN">🎓 Education Loan</option>
