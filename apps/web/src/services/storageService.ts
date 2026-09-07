@@ -3950,7 +3950,7 @@ class StorageService {
     });
 
     // 6-Month Trend
-    const monthlyTrend = this.calculatePast6MonthsTrend();
+    const monthlyTrend = this.calculatePast6MonthsTrend(month);
 
     return {
       month,
@@ -3974,13 +3974,23 @@ class StorageService {
     };
   }
 
-  private calculatePast6MonthsTrend() {
+  private calculatePast6MonthsTrend(targetMonth?: string) {
     const allTxns: Transaction[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
-    const now = new Date();
-    const trend = [];
+    let baseYear = 2026;
+    let baseMonth = 9;
+    if (targetMonth) {
+      const parts = targetMonth.split('-');
+      baseYear = parseInt(parts[0], 10);
+      baseMonth = parseInt(parts[1], 10);
+    } else {
+      const now = new Date();
+      baseYear = now.getFullYear();
+      baseMonth = now.getMonth() + 1;
+    }
 
+    const trend = [];
     for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d = new Date(baseYear, baseMonth - 1 - i, 1);
       const m = d.toISOString().slice(0, 7);
       const monthTxns = allTxns.filter((t) => t.date.startsWith(m));
 
