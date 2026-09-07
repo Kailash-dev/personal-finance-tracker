@@ -375,6 +375,25 @@ class StorageService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
+      {
+        id: 'debt_ram_fincorp',
+        userId: 'user_kailash',
+        name: 'Ram Fincorp Loan Repayment',
+        lender: 'Ram Fincorp',
+        type: 'NBFC_LOAN',
+        originalAmount: 17500,
+        outstandingAmount: 17500,
+        monthlyEmi: 17500,
+        interestRate: 0,
+        totalTenureMonths: 1,
+        emisPaid: 0,
+        emisRemaining: 1,
+        startDate: '2026-08-09',
+        dueDay: 9,
+        notes: 'Ram Fincorp loan repayment — due 9th September 2026 (OVERDUE — pay immediately!)',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     ];
 
     const EXACT_USER_ACCOUNTS: Account[] = [
