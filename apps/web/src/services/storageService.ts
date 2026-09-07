@@ -452,7 +452,12 @@ class StorageService {
   // --- ACCOUNTS ---
   getAccounts(): Account[] {
     const raw = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
-    return raw ? JSON.parse(raw) : [];
+    let accounts: Account[] = raw ? JSON.parse(raw) : [];
+    if (!accounts || accounts.length === 0) {
+      this.seedKailashFinanceData();
+      accounts = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACCOUNTS) || '[]');
+    }
+    return accounts;
   }
 
   createAccount(account: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>): Account {
@@ -486,7 +491,12 @@ class StorageService {
     type?: string;
     search?: string;
   }): Transaction[] {
-    let txns: Transaction[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+    let raw = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+    let txns: Transaction[] = raw ? JSON.parse(raw) : [];
+    if (!txns || txns.length === 0) {
+      this.seedKailashFinanceData();
+      txns = JSON.parse(localStorage.getItem(STORAGE_KEYS.TRANSACTIONS) || '[]');
+    }
     const accounts = this.getAccounts();
     const categories = this.getCategories();
     const accMap = new Map(accounts.map((a) => [a.id, a]));
@@ -751,7 +761,12 @@ class StorageService {
   // --- DEBTS ---
   getDebts(): Debt[] {
     const raw = localStorage.getItem(STORAGE_KEYS.DEBTS);
-    return raw ? JSON.parse(raw) : [];
+    let debts: Debt[] = raw ? JSON.parse(raw) : [];
+    if (!debts || debts.length === 0) {
+      this.seedKailashFinanceData();
+      debts = JSON.parse(localStorage.getItem(STORAGE_KEYS.DEBTS) || '[]');
+    }
+    return debts;
   }
 
   createDebt(debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>): Debt {
@@ -857,6 +872,10 @@ class StorageService {
   getBorrowings(month?: string): Borrowing[] {
     const raw = localStorage.getItem(STORAGE_KEYS.BORROWINGS);
     let list: Borrowing[] = raw ? JSON.parse(raw) : [];
+    if (!list || list.length === 0) {
+      this.seedKailashFinanceData();
+      list = JSON.parse(localStorage.getItem(STORAGE_KEYS.BORROWINGS) || '[]');
+    }
     if (month) {
       list = list.filter((b) => b.borrowDate.startsWith(month) || (b.dueDate && b.dueDate.startsWith(month)) || b.status !== 'SETTLED');
     }

@@ -22,13 +22,28 @@ const AUTH_KEYS = {
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(AUTH_KEYS.TOKEN));
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem(AUTH_KEYS.TOKEN) || 'token_kailash_active');
   const [user, setUser] = useState<User | null>(() => {
     const raw = localStorage.getItem(AUTH_KEYS.USER);
-    return raw ? JSON.parse(raw) : null;
+    if (raw) return JSON.parse(raw);
+    const defaultUser: User = {
+      id: 'user_kailash',
+      name: 'Kailash',
+      email: 'kailash@personal-finance.local',
+      monthlyIncome: 50000,
+      currency: 'INR',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(AUTH_KEYS.USER, JSON.stringify(defaultUser));
+    localStorage.setItem(AUTH_KEYS.TOKEN, 'token_kailash_active');
+    localStorage.setItem(AUTH_KEYS.ONBOARDED, 'true');
+    return defaultUser;
   });
   const [isOnboarded, setIsOnboarded] = useState<boolean>(() => {
-    return localStorage.getItem(AUTH_KEYS.ONBOARDED) === 'true';
+    const raw = localStorage.getItem(AUTH_KEYS.ONBOARDED);
+    if (raw !== null) return raw === 'true';
+    return true;
   });
 
   const isAuthenticated = !!user;

@@ -630,6 +630,16 @@ export const DebtsPage: React.FC = () => {
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
                 <button
+                  onClick={async () => {
+                    await dataProvider.seedKailashFinanceData();
+                    triggerRefresh();
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold text-xs shadow-lg shadow-brand-500/25 transition-all flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Load Kailash's Complete September FinPlan</span>
+                </button>
+                <button
                   onClick={() => openPresetModal('RENT_HOUSING', 'House Rent', 'Landlord')}
                   className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-500/25 transition-all"
                 >
@@ -640,18 +650,6 @@ export const DebtsPage: React.FC = () => {
                   className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-md shadow-amber-500/25 transition-all"
                 >
                   + Add Groceries
-                </button>
-                <button
-                  onClick={() => openPresetModal('CHIT_FUND_VC', 'VC 1 (Monthly Chit)', 'Chit Committee')}
-                  className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs shadow-md shadow-purple-500/25 transition-all"
-                >
-                  + Add VC 1
-                </button>
-                <button
-                  onClick={() => openPresetModal('BIKE_LOAN', 'Bike EMI', 'Finance Company')}
-                  className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-md shadow-rose-500/25 transition-all"
-                >
-                  + Add Bike EMI
                 </button>
               </div>
             </div>
@@ -811,7 +809,17 @@ export const DebtsPage: React.FC = () => {
                   Keep track of quick hand loans borrowed from friends, colleagues, or relatives, as well as money you lent to others.
                 </p>
               </div>
-              <div className="flex items-center justify-center gap-2 pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                <button
+                  onClick={async () => {
+                    await dataProvider.seedKailashFinanceData();
+                    triggerRefresh();
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white font-bold text-xs shadow-lg shadow-brand-500/25 transition-all flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Load Kailash's Hand Loans & Borrowings</span>
+                </button>
                 <button
                   onClick={() => {
                     setBorrowingType('BORROWED');
@@ -821,7 +829,7 @@ export const DebtsPage: React.FC = () => {
                   }}
                   className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-md shadow-rose-500/25 transition-all"
                 >
-                  + Money I Borrowed
+                  + I Borrowed Money
                 </button>
                 <button
                   onClick={() => {
@@ -832,7 +840,7 @@ export const DebtsPage: React.FC = () => {
                   }}
                   className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-md shadow-emerald-500/25 transition-all"
                 >
-                  + Money I Lent
+                  + I Lent Money
                 </button>
               </div>
             </div>
