@@ -192,6 +192,10 @@ export class DataProvider {
     }
     return { success: true, count: unSkipped.length };
   }
+
+  async seedKailashFinanceData() {
+    storageService.seedKailashFinanceData();
+  }
 }
 
 export const dataProvider = new DataProvider();

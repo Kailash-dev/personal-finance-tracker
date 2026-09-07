@@ -7,6 +7,7 @@ import { CategoryDonutChart } from '../components/dashboard/CategoryDonutChart';
 import { GoalProgressWidget } from '../components/dashboard/GoalProgressWidget';
 import { HealthScoreWidget } from '../components/dashboard/HealthScoreWidget';
 import { CreditCardWidget } from '../components/dashboard/CreditCardWidget';
+import { SeptemberTrackerWidget } from '../components/dashboard/SeptemberTrackerWidget';
 import { QuickExpenseLoggerBar } from '../components/dashboard/QuickExpenseLoggerBar';
 import { formatINR } from '@personal-finance/shared';
 import {
@@ -96,6 +97,9 @@ export const DashboardPage: React.FC = () => {
 
       {/* Quick Expense Logger Strip */}
       <QuickExpenseLoggerBar />
+
+      {/* Kailash's September Cash Flow & Debt Tracker */}
+      <SeptemberTrackerWidget />
 
       {/* Finance Mentor Banner */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-brand-500/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

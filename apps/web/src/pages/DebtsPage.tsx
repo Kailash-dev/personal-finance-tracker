@@ -41,6 +41,8 @@ import {
   Tv,
 } from 'lucide-react';
 
+import { SeptemberTrackerWidget } from '../components/dashboard/SeptemberTrackerWidget';
+
 const DEBT_TYPE_CONFIG: Record<
   DebtType,
   { label: string; icon: any; color: string; badgeBg: string }
@@ -408,6 +410,9 @@ export const DebtsPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Kailash's September Cash Flow & Debt Tracker */}
+      <SeptemberTrackerWidget />
 
       {/* Main Feature Tabs */}
       <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 max-w-xl">
