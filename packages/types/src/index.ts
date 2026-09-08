@@ -215,7 +215,7 @@ export interface Debt {
   originalAmount: number;
   outstandingAmount: number;
   interestRate: number; // Annual % (e.g., 8.5 or 42 for credit cards)
-  monthlyEmi: number; // For loans: monthly EMI; For credit cards: Minimum Due (MAD)
+  monthlyEmi: number; // For loans: monthly EMI; For credit cards: Minimum Due (MAD) or settlement EMI
   totalDueAmount?: number; // Full Statement Balance / Total Amount Due (TAD)
   minimumDueAmount?: number; // Minimum Amount Due (MAD)
   creditLimit?: number; // Total Card Limit (for CUR utilization calculation)
@@ -227,6 +227,11 @@ export interface Debt {
   endDate?: string;
   dueDay: number; // 1-31 (Payment Due Date)
   notes?: string;
+  // Credit Card Account Status — determines payment modal behaviour
+  cardAccountStatus?: 'ACTIVE' | 'SETTLEMENT_EMI' | 'SETTLEMENT_LUMPSUM';
+  // For SETTLEMENT_EMI: total agreed settlement amount (e.g., ₹4,200 agreed, 3 EMIs of ₹1,400)
+  // For SETTLEMENT_LUMPSUM: the single agreed lump-sum amount to pay
+  settlementTotalAmount?: number;
   createdAt: string;
   updatedAt: string;
 }

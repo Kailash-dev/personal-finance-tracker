@@ -420,9 +420,19 @@ export const DebtsPage: React.FC = () => {
     if (!selectedDebtToPay) return;
 
     const isCard = selectedDebtToPay.type === 'CREDIT_CARD_MIN_PAYMENT';
-    const finalAmount = isCard && cardPayMode === 'settlement'
-      ? parseFloat(settlementAmount)
-      : parseFloat(payAmount);
+    const cardStatus = selectedDebtToPay.cardAccountStatus ?? 'ACTIVE';
+
+    let finalAmount: number;
+    if (isCard && cardStatus === 'SETTLEMENT_EMI') {
+      // For settlement EMIs, always use the fixed monthly installment amount
+      finalAmount = selectedDebtToPay.monthlyEmi;
+    } else if (isCard && cardStatus === 'SETTLEMENT_LUMPSUM') {
+      finalAmount = parseFloat(payAmount) || (selectedDebtToPay.settlementTotalAmount ?? selectedDebtToPay.outstandingAmount);
+    } else if (isCard && cardPayMode === 'settlement') {
+      finalAmount = parseFloat(settlementAmount);
+    } else {
+      finalAmount = parseFloat(payAmount);
+    }
 
     if (!finalAmount || isNaN(finalAmount)) return;
 
@@ -438,6 +448,7 @@ export const DebtsPage: React.FC = () => {
       console.error(err);
     }
   };
+
 
   // Edit Debt Handlers
   const handleOpenEditModal = (debt: Debt) => {
@@ -2526,9 +2537,16 @@ export const DebtsPage: React.FC = () => {
       {isPayModalOpen && selectedDebtToPay && (() => {
         const isCard = selectedDebtToPay.type === 'CREDIT_CARD_MIN_PAYMENT';
         const cardDetails = isCard ? calculateCreditCardDetails(selectedDebtToPay) : null;
+        const cardStatus = selectedDebtToPay.cardAccountStatus ?? 'ACTIVE';
         const currentPayNum = isCard && cardPayMode === 'settlement'
           ? parseFloat(settlementAmount) || 0
           : parseFloat(payAmount) || 0;
+
+        // For SETTLEMENT_EMI: which installment number is this?
+        const settlEmiNum = (selectedDebtToPay.emisPaid ?? 0) + 1;
+        const settlEmiTotal = selectedDebtToPay.totalTenureMonths ?? 1;
+        const settlEmiAmount = selectedDebtToPay.monthlyEmi ?? 0;
+        const settlTotalAgreed = selectedDebtToPay.settlementTotalAmount ?? (settlEmiAmount * settlEmiTotal);
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -2538,7 +2556,11 @@ export const DebtsPage: React.FC = () => {
                 <div>
                   <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-1.5">
                     {isCard ? <CreditCard className="w-4 h-4 text-purple-600" /> : <Wallet className="w-4 h-4 text-brand-600" />}
-                    {isCard ? 'Record Credit Card Payment' : 'Record Monthly Payment'}
+                    {isCard
+                      ? cardStatus === 'SETTLEMENT_EMI' ? '🤝 Record Settlement Installment'
+                      : cardStatus === 'SETTLEMENT_LUMPSUM' ? '🤝 Record Settlement Payment'
+                      : 'Record Credit Card Payment'
+                      : 'Record Monthly Payment'}
                   </h3>
                   <p className="text-[11px] text-slate-400">{selectedDebtToPay.name} • {selectedDebtToPay.lender}</p>
                 </div>
@@ -2550,180 +2572,206 @@ export const DebtsPage: React.FC = () => {
               <form onSubmit={handleConfirmPayment} className="space-y-4 text-xs">
                 {isCard && cardDetails ? (
                   <div className="space-y-3">
-                    <label className="block font-bold text-slate-700 dark:text-slate-300">
-                      Choose Payment Option
-                    </label>
 
-                    <div className="grid grid-cols-3 gap-2">
-                      {/* Option 1: Minimum Amount Due (MAD) */}
-                      <button
-                        type="button"
-                        onClick={() => { setCardPayMode('min'); setPayAmount(cardDetails.minimumDueAmount.toString()); }}
-                        className={`p-3 rounded-2xl border text-left transition-all relative ${
-                          cardPayMode === 'min'
-                            ? 'bg-purple-50 dark:bg-purple-950/60 border-purple-500 shadow-sm ring-2 ring-purple-500/20'
-                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-purple-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-bold uppercase text-purple-700 dark:text-purple-300">
-                            ⚡ Min Due
-                          </span>
-                          {cardPayMode === 'min' && (
-                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-purple-200/80 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
-                              MAD
+                    {/* ── MODE A: SETTLEMENT in EMIs ─────────────────────── */}
+                    {cardStatus === 'SETTLEMENT_EMI' && (
+                      <div className="space-y-3">
+                        {/* Settlement progress banner */}
+                        <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-400/40">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-bold text-amber-800 dark:text-amber-200">Settlement Progress</span>
+                            <span className="text-[11px] font-black text-amber-700 dark:text-amber-300">
+                              {selectedDebtToPay.emisPaid ?? 0} of {settlEmiTotal} paid
                             </span>
-                          )}
-                        </div>
-                        <div className="text-sm font-black text-purple-700 dark:text-purple-300">
-                          {formatINR(cardDetails.minimumDueAmount)}
-                        </div>
-                        <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          Protects CIBIL
-                        </p>
-                      </button>
-
-                      {/* Option 2: Total Amount Due (TAD) */}
-                      <button
-                        type="button"
-                        onClick={() => { setCardPayMode('full'); setPayAmount(cardDetails.totalDueAmount.toString()); }}
-                        className={`p-3 rounded-2xl border text-left transition-all relative ${
-                          cardPayMode === 'full'
-                            ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 shadow-sm ring-2 ring-emerald-500/20'
-                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-emerald-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300">
-                            🌟 Full Bill
-                          </span>
-                          {cardPayMode === 'full' && (
-                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-200/80 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
-                              TAD
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm font-black text-emerald-700 dark:text-emerald-300">
-                          {formatINR(cardDetails.totalDueAmount)}
-                        </div>
-                        <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          0% interest
-                        </p>
-                      </button>
-
-                      {/* Option 3: Settlement */}
-                      <button
-                        type="button"
-                        onClick={() => { setCardPayMode('settlement'); setPayAmount(''); }}
-                        className={`p-3 rounded-2xl border text-left transition-all relative ${
-                          cardPayMode === 'settlement'
-                            ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-500 shadow-sm ring-2 ring-amber-500/20'
-                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-amber-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-bold uppercase text-amber-700 dark:text-amber-300">
-                            🤝 Settlement
-                          </span>
-                          {cardPayMode === 'settlement' && (
-                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-200/80 dark:bg-amber-900 text-amber-800 dark:text-amber-200">
-                              Custom
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm font-black text-amber-700 dark:text-amber-300">
-                          Custom ₹
-                        </div>
-                        <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          Negotiated amt
-                        </p>
-                      </button>
-                    </div>
-
-                    {/* Settlement Amount Input — only shown when Settlement is selected */}
-                    {cardPayMode === 'settlement' && (
-                      <div className="mt-3 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-400/40 space-y-2">
-                        <label className="block text-[11px] font-bold text-amber-800 dark:text-amber-300">
-                          🤝 Enter Negotiated Settlement Amount (₹)
-                        </label>
-                        <input
-                          type="number"
-                          required
-                          autoFocus
-                          step="any"
-                          placeholder="e.g. 25000"
-                          value={settlementAmount}
-                          onChange={(e) => setSettlementAmount(e.target.value)}
-                          className="w-full px-3 py-2 text-base font-extrabold rounded-xl bg-white dark:bg-slate-800 border border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 placeholder:text-amber-300 dark:placeholder:text-amber-700"
-                        />
-                        <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                          Enter the amount the bank/lender agreed to accept as full & final settlement.
-                        </p>
-                      </div>
-                    )}
-
-
-                    {/* Payment amount input — hidden when settlement (has its own input above) */}
-                    {cardPayMode !== 'settlement' && (
-                      <div>
-                        <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Payment Amount (₹)
-                        </label>
-                        <input
-                          type="number"
-                          required
-                          step="any"
-                          value={payAmount}
-                          onChange={(e) => setPayAmount(e.target.value)}
-                          className="w-full px-3 py-2 text-base font-extrabold rounded-xl bg-slate-50 dark:bg-slate-800 border border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400"
-                        />
-                      </div>
-                    )}
-
-                    {/* Dynamic Explainer */}
-                    <div className={`p-3 rounded-xl border text-[11px] space-y-1 ${
-                      cardPayMode === 'settlement'
-                        ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-500/20 text-amber-900 dark:text-amber-200'
-                        : 'bg-purple-50/80 dark:bg-purple-950/40 border-purple-500/20 text-purple-900 dark:text-purple-200'
-                    }`}>
-                      {cardPayMode === 'settlement' ? (
-                        <div className="space-y-1">
-                          <div className="flex items-start gap-1.5 font-bold text-amber-800 dark:text-amber-200">
-                            <span>🤝 Settlement Payment</span>
                           </div>
-                          <p className="text-[10px] text-amber-700 dark:text-amber-400">
-                            ✓ Records your negotiated lump sum payment.
-                            <br />
-                            ⚠️ Settled accounts are marked on CIBIL as "Settled" (not "Closed") — this slightly impacts score.
-                            <br />
-                            💡 Always get a No Objection Certificate (NOC) / Settlement letter from the bank in writing.
+                          {/* Progress bar */}
+                          <div className="h-2 w-full bg-amber-200/60 dark:bg-amber-900/60 rounded-full overflow-hidden mb-2">
+                            <div
+                              className="h-full bg-amber-500 rounded-full transition-all"
+                              style={{ width: `${Math.round(((selectedDebtToPay.emisPaid ?? 0) / settlEmiTotal) * 100)}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-[10px] text-amber-700 dark:text-amber-400">
+                            <span>Agreed total: {formatINR(settlTotalAgreed)}</span>
+                            <span>Remaining: {formatINR(selectedDebtToPay.outstandingAmount)}</span>
+                          </div>
+                        </div>
+
+                        {/* Current installment — locked, no choice */}
+                        <div className="p-4 rounded-2xl bg-amber-100/60 dark:bg-amber-950/60 border-2 border-amber-500 text-center">
+                          <p className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400 mb-1">
+                            Installment {settlEmiNum} of {settlEmiTotal}
+                          </p>
+                          <div className="text-2xl font-black text-amber-700 dark:text-amber-300">
+                            {formatINR(settlEmiAmount)}
+                          </div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                            This is the only amount you should pay this cycle.
                           </p>
                         </div>
-                      ) : currentPayNum >= cardDetails.totalDueAmount ? (
-                        <div className="flex items-start gap-1.5 text-emerald-700 dark:text-emerald-300 font-semibold">
-                          <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
-                          <span>✨ Full Payment: You clear 100% of the statement bill. Zero revolving interest charged!</span>
+
+                        <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 space-y-1">
+                          <p className="font-bold">⚠️ Do NOT pay the full original card dues</p>
+                          <p className="text-amber-700 dark:text-amber-400">
+                            Your bank has agreed to accept {formatINR(settlTotalAgreed)} as full &amp; final settlement
+                            (originally you owed more). Pay only the installment amount above.
+                            <br /><br />
+                            💡 Once all {settlEmiTotal} installments are paid, <strong>get a Settlement Letter / NOC</strong> from the bank immediately. This is proof that the debt is closed.
+                          </p>
                         </div>
-                      ) : currentPayNum >= cardDetails.minimumDueAmount ? (
+
+                        {/* Hidden input pre-filled with EMI amount */}
+                        <input type="hidden" value={settlEmiAmount} onChange={() => {}} />
+                      </div>
+                    )}
+
+                    {/* ── MODE B: SETTLEMENT Lump Sum ───────────────────── */}
+                    {cardStatus === 'SETTLEMENT_LUMPSUM' && (
+                      <div className="space-y-3">
+                        <div className="p-4 rounded-2xl bg-amber-100/60 dark:bg-amber-950/60 border-2 border-amber-500 text-center">
+                          <p className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400 mb-1">
+                            Full &amp; Final Settlement Amount
+                          </p>
+                          <div className="text-2xl font-black text-amber-700 dark:text-amber-300">
+                            {formatINR(selectedDebtToPay.settlementTotalAmount ?? selectedDebtToPay.outstandingAmount)}
+                          </div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                            Agreed negotiated amount — one-time lump sum
+                          </p>
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 space-y-1">
+                          <p className="font-bold">🤝 Settlement Payment Rules:</p>
+                          <p className="text-amber-700 dark:text-amber-400">
+                            ✓ Pay only the agreed settlement amount above — NOT the original outstanding.<br />
+                            ⚠️ CIBIL will mark this as "Settled" (slightly different from "Closed").<br />
+                            💡 Demand a written Settlement Letter / NOC before or immediately after payment.
+                          </p>
+                        </div>
+
                         <div>
-                          <div className="flex items-center gap-1.5 font-bold text-purple-800 dark:text-purple-200">
-                            <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0" />
-                            <span>Minimum Due Paid ({formatINR(currentPayNum)}):</span>
-                          </div>
-                          <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5">
-                            ✓ No late payment fees will be charged.
-                            <br />
-                            ✓ CIBIL score is marked as 100% On-Time.
-                            <br />
-                            ⏳ Remaining {formatINR(Math.max(0, cardDetails.totalDueAmount - currentPayNum))} revolves to next statement at ~3.5%/mo.
-                          </p>
+                          <label className="block font-semibold text-amber-800 dark:text-amber-300 mb-1">
+                            Confirm Settlement Amount (₹)
+                          </label>
+                          <input
+                            type="number"
+                            required
+                            autoFocus
+                            step="any"
+                            value={payAmount || (selectedDebtToPay.settlementTotalAmount ?? selectedDebtToPay.outstandingAmount).toString()}
+                            onChange={(e) => setPayAmount(e.target.value)}
+                            className="w-full px-3 py-2 text-base font-extrabold rounded-xl bg-white dark:bg-slate-800 border border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300"
+                          />
                         </div>
-                      ) : (
-                        <div className="text-amber-700 dark:text-amber-300 font-medium">
-                          ⚠️ Paying less than Minimum Due ({formatINR(cardDetails.minimumDueAmount)}) may attract late payment penalties from the bank.
+                      </div>
+                    )}
+
+                    {/* ── MODE C: ACTIVE Credit Card ────────────────────── */}
+                    {(cardStatus === 'ACTIVE' || !cardStatus) && (
+                      <div className="space-y-3">
+                        <label className="block font-bold text-slate-700 dark:text-slate-300">
+                          Choose Payment Option
+                        </label>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* Option 1: Min Due (MAD) */}
+                          <button
+                            type="button"
+                            onClick={() => { setCardPayMode('min'); setPayAmount(cardDetails.minimumDueAmount.toString()); }}
+                            className={`p-3 rounded-2xl border text-left transition-all ${
+                              cardPayMode === 'min'
+                                ? 'bg-purple-50 dark:bg-purple-950/60 border-purple-500 ring-2 ring-purple-500/20'
+                                : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-purple-300'
+                            }`}
+                          >
+                            <div className="text-[10px] font-bold uppercase text-purple-700 dark:text-purple-300 mb-1">⚡ Min Due</div>
+                            <div className="text-sm font-black text-purple-700 dark:text-purple-300">{formatINR(cardDetails.minimumDueAmount)}</div>
+                            <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">Protects CIBIL</p>
+                          </button>
+
+                          {/* Option 2: Full Bill (TAD) */}
+                          <button
+                            type="button"
+                            onClick={() => { setCardPayMode('full'); setPayAmount(cardDetails.totalDueAmount.toString()); }}
+                            className={`p-3 rounded-2xl border text-left transition-all ${
+                              cardPayMode === 'full'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 ring-2 ring-emerald-500/20'
+                                : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-emerald-300'
+                            }`}
+                          >
+                            <div className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300 mb-1">🌟 Full Bill</div>
+                            <div className="text-sm font-black text-emerald-700 dark:text-emerald-300">{formatINR(cardDetails.totalDueAmount)}</div>
+                            <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">0% interest</p>
+                          </button>
+
+                          {/* Option 3: Custom */}
+                          <button
+                            type="button"
+                            onClick={() => { setCardPayMode('settlement'); setPayAmount(''); }}
+                            className={`p-3 rounded-2xl border text-left transition-all ${
+                              cardPayMode === 'settlement'
+                                ? 'bg-slate-100 dark:bg-slate-800 border-slate-500 ring-2 ring-slate-500/20'
+                                : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                            }`}
+                          >
+                            <div className="text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">✏️ Custom</div>
+                            <div className="text-sm font-black text-slate-600 dark:text-slate-300">Enter ₹</div>
+                            <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">Any amount</p>
+                          </button>
                         </div>
-                      )}
-                    </div>
+
+                        {/* Amount input */}
+                        <div>
+                          <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            {cardPayMode === 'settlement' ? 'Enter Amount (₹)' : 'Payment Amount (₹)'}
+                          </label>
+                          <input
+                            type="number"
+                            required
+                            step="any"
+                            autoFocus={cardPayMode === 'settlement'}
+                            placeholder={cardPayMode === 'settlement' ? 'Enter any amount between MAD and TAD' : ''}
+                            value={payAmount}
+                            onChange={(e) => setPayAmount(e.target.value)}
+                            className="w-full px-3 py-2 text-base font-extrabold rounded-xl bg-slate-50 dark:bg-slate-800 border border-purple-300 dark:border-purple-700 text-purple-600 dark:text-purple-400"
+                          />
+                        </div>
+
+                        {/* Dynamic explainer */}
+                        <div className={`p-3 rounded-xl border text-[11px] ${
+                          currentPayNum >= cardDetails.totalDueAmount
+                            ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-500/20 text-emerald-800 dark:text-emerald-300'
+                            : currentPayNum >= cardDetails.minimumDueAmount
+                            ? 'bg-purple-50/80 dark:bg-purple-950/40 border-purple-500/20 text-purple-900 dark:text-purple-200'
+                            : 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-500/20 text-amber-800 dark:text-amber-300'
+                        }`}>
+                          {currentPayNum >= cardDetails.totalDueAmount ? (
+                            <div className="flex items-start gap-1.5 font-semibold">
+                              <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+                              <span>✨ Full payment! Zero revolving interest. Card resets completely for next cycle.</span>
+                            </div>
+                          ) : currentPayNum >= cardDetails.minimumDueAmount ? (
+                            <div>
+                              <div className="flex items-center gap-1.5 font-bold">
+                                <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0" />
+                                <span>Minimum Due Protected:</span>
+                              </div>
+                              <p className="text-[10px] mt-0.5 opacity-80">
+                                ✓ No late fees. CIBIL marked On-Time.
+                                <br />⏳ {formatINR(Math.max(0, cardDetails.totalDueAmount - currentPayNum))} carries forward at ~3.5%/month interest.
+                              </p>
+                            </div>
+                          ) : currentPayNum > 0 ? (
+                            <div>
+                              ⚠️ Below Minimum Due ({formatINR(cardDetails.minimumDueAmount)}).<br />
+                              Late fee + CIBIL impact. Pay at least MAD to be safe.
+                            </div>
+                          ) : (
+                            <div className="text-slate-500">Select an option or enter an amount above.</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -2737,23 +2785,40 @@ export const DebtsPage: React.FC = () => {
                       className="w-full px-3 py-2.5 text-lg font-extrabold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-brand-600"
                     />
                     <div className="p-3 mt-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-[11px]">
-                      💡 This will record an expense transaction for this month and automatically update your cash flow and account balance for <strong>{selectedDebtToPay.name}</strong> ({formatINR(parseFloat(payAmount) || 0)}).
+                      💡 This will record an expense transaction and update your cash flow for <strong>{selectedDebtToPay.name}</strong>.
                     </div>
                   </div>
                 )}
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/25 flex items-center justify-center gap-1.5"
+                  onClick={() => {
+                    // For SETTLEMENT_EMI: override payAmount with the fixed installment
+                    if (isCard && cardStatus === 'SETTLEMENT_EMI') {
+                      setPayAmount(settlEmiAmount.toString());
+                    }
+                  }}
+                  className={`w-full py-2.5 rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-1.5 ${
+                    isCard && (cardStatus === 'SETTLEMENT_EMI' || cardStatus === 'SETTLEMENT_LUMPSUM')
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-500/25'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/25'
+                  }`}
                 >
                   <Check className="w-4 h-4" />
-                  <span>Confirm & Record Payment</span>
+                  <span>
+                    {isCard && cardStatus === 'SETTLEMENT_EMI'
+                      ? `Pay Installment ${settlEmiNum} — ${formatINR(settlEmiAmount)}`
+                      : isCard && cardStatus === 'SETTLEMENT_LUMPSUM'
+                      ? 'Pay Full & Final Settlement'
+                      : 'Confirm & Record Payment'}
+                  </span>
                 </button>
               </form>
             </div>
           </div>
         );
       })()}
+
 
       {/* Modal 3: Add Current Month Short-Term Borrowing / Hand Loan */}
       {isAddBorrowingOpen && (
